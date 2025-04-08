@@ -5,6 +5,10 @@
 # Use GitHub CLI to access secrets and create .env file
 # (Requires gh CLI to be installed and authenticated)
 gh secret list | while read -r line; do
-key=$(echo "$line" | awk '{print $1}')
-value=$(gh secret get "$key")
-echo "$key=$value" >> .env
+    # Extract just the secret name (first column)
+    key=$(echo "$line" | awk '{print $1}')
+    # Get the secret value
+    value=$(gh secret get "$key")
+    # Append to .env
+    echo "$key=$value" >> .env
+done
