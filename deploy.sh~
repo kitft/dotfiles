@@ -8,12 +8,14 @@ USAGE=$(cat <<-END
     OPTIONS:
         --vim                   deploy very simple vimrc config 
         --aliases               specify additional alias scripts to source in .zshrc, separated by commas
+	--secrets           get your secrets from Github secrets
 END
 )
 
 export DOT_DIR=$(dirname $(realpath $0))
 
 VIM="false"
+SECRETS="false"
 ALIASES=()
 while (( "$#" )); do
     case "$1" in
@@ -21,6 +23,8 @@ while (( "$#" )); do
             echo "$USAGE" && exit 1 ;;
         --vim)
             VIM="true" && shift ;;
+	--secrets)
+	    SECRETS="true"&& shift ;;
         --aliases=*)
             IFS=',' read -r -a ALIASES <<< "${1#*=}" && shift ;;
         --) # end argument parsing
@@ -58,7 +62,10 @@ fi
 echo "changing default shell to zsh"
 sudo chsh -s $(which zsh)
 
-echo "getting secrets"
-source ./setup_env.sh
+if [[ $SECRETS == "true" ]]; then
+	echo "getting secrets"
+	source "$DOT_DIR/setup_env.sh"
+fi
+
 
 zsh
