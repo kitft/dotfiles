@@ -96,7 +96,7 @@ llmc() {
             fi
 
             # Always attempt to remove the temporary file if it exists
-            [[ -f "$temp_file" ]] && rm "$temp_file"
+            [[ -f "$temp_file" ]] && rm -f "$temp_file"
 
             # Reset the signal trap to the default behavior to clean up resources
             trap - SIGINT

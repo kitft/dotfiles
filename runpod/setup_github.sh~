@@ -3,8 +3,8 @@
 #!/bin/bash
 
 # Input arguments
-email=${1:-"jpl.hughes@btinternet.com"}
-name=${2:-"John Hughes"}
+email=${1:-"kitfrasertaliente@gmail.com"}
+name=${2:-"Kit FT"}
 github_url=${3:-""}
 
 # 0) Setup git
@@ -25,4 +25,16 @@ if [ -n "$github_url" ]; then
     repo_name=$(basename "$github_url" .git)
     cd "$repo_name"
     uv pip install -r requirements.txt
+fi
+
+
+# Configure GitHub CLI to use SSH instead of HTTPS
+if command -v gh &> /dev/null; then
+    echo "GitHub CLI found, configuring to use SSH authentication..."
+    gh config set git_protocol ssh
+    # Test authentication using existing SSH key
+    echo "Testing GitHub CLI with SSH authentication..."
+    gh auth status
+else
+    echo "GitHub CLI not found. Install it with 'apt install gh' or equivalent for your system."
 fi

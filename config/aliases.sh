@@ -81,6 +81,7 @@ alias gaa="git add ."
 alias gau="git add -u"
 alias gc="git commit -m"
 alias gp="git push"
+alias gac="git add * && git commit -m" 
 alias gpf="git push -f"
 alias gpo='git push origin $(git_current_branch)'
 alias gpp='git push --set-upstream origin $(git_current_branch)'
