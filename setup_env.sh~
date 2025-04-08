@@ -1,0 +1,10 @@
+#!/bin/bash
+# setup_env.sh
+
+# We should be already in the correct repo 
+# Use GitHub CLI to access secrets and create .env file
+# (Requires gh CLI to be installed and authenticated)
+gh secret list | while read -r line; do
+key=$(echo "$line" | awk '{print $1}')
+value=$(gh secret get "$key")
+echo "$key=$value" >> .env
