@@ -54,5 +54,6 @@ sudo apt-get install -y nodejs
 
 # Claude code
 npm install -g @anthropic-ai/claude-code
+alias workspace="cd /workspace/kitf"
 
 ./deploy.sh # Note: This starts a new shell, ending this script
