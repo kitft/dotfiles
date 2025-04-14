@@ -195,3 +195,6 @@ alias qclear='scancel -u $(whoami)'
 qrun() {
   sbatch --gres=gpu:"$1" "$2"
 }
+alias uvinstall="uv pip install --update-requirements requirements.txt"
+
+alias getenvs="/workspace/kitf/setup_env.sh"

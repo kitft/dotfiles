@@ -81,6 +81,7 @@ alias gaa="git add ."
 alias gau="git add -u"
 alias gc="git commit -m"
 alias gp="git push"
+alias gac="git add * && git commit -m" 
 alias gpf="git push -f"
 alias gpo='git push origin $(git_current_branch)'
 alias gpp='git push --set-upstream origin $(git_current_branch)'
@@ -194,3 +195,6 @@ alias qclear='scancel -u $(whoami)'
 qrun() {
   sbatch --gres=gpu:"$1" "$2"
 }
+alias uvinstall="uv pip install --update-requirements requirements.txt"
+
+alias getenvs="/workspace/kitf/setup_env.sh"
