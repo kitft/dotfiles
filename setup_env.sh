@@ -31,6 +31,19 @@ cat "$temp_dir/.env" >> ./.env
 
 echo "Successfully appended secrets to your local .env file."
 
+# Ensure .env is in .gitignore
+if [ ! -f "./.gitignore" ]; then
+    echo ".env" > ./.gitignore
+    echo "Created .gitignore file with .env entry."
+else
+    if ! grep -q "^\.env$" ./.gitignore; then
+        echo ".env" >> ./.gitignore
+        echo "Added .env to existing .gitignore file."
+    else
+        echo ".env is already in .gitignore file."
+    fi
+fi
+
 # Clean up the temporary directory
 rm -rf "$temp_dir"
 echo "Cleanup complete."
