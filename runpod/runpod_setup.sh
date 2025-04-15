@@ -12,7 +12,7 @@ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     lsof \
     zsh \
     tmux \
-    nvim \
+    neovim \
 sudo apt install gh
 
 # 3) Setup Python tools
