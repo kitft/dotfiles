@@ -87,6 +87,8 @@ if [ -n "$github_url" ]; then
         echo "Failed to clone repository."
     fi
 fi
+echo "setting credential store"
+git config --global credential.helper store
 
 echo "Setup complete!"
 
@@ -183,3 +185,4 @@ echo "Setup complete!"
 #else
 #    echo "GitHub CLI not found. Install it with 'apt install gh' or equivalent for your system."
 #fi
+

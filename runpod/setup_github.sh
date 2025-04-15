@@ -10,7 +10,7 @@ git config --global user.name "$name"
 
 # 1) Setup GitHub authentication
 echo "Setting up GitHub..."
-read -p "Would you like to set up GitHub credentials? (y/n) " setup_github
+read -p "Would you like to set up GitHub credentials? Try using CLI, then SSH key (y/n) " setup_github
 if [[ "$setup_github" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     # Check if GitHub CLI exists
     if command -v gh &> /dev/null; then
