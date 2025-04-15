@@ -2,7 +2,7 @@
 
 # 1) Setup GitHub credentials
 echo "Setting up GitHub..."
-read -p "Would you like to set up GitHub credentials? (y/n) " setup_github
+read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
 if [[ $setup_github =~ ^[Yy]$ ]]; then
     cd "$(dirname "$0")"
     if [ -f "./setup_github.sh" ]; then

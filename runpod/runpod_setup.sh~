@@ -27,6 +27,7 @@ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     zsh \
     tmux \
     gh
+sudo apt-get gh
 
 # 3) Setup Python tools
 echo "Setting up Python tools..."
