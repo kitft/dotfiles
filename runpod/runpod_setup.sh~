@@ -1,19 +1,5 @@
 #!/bin/bash
 
-# 1) Setup GitHub credentials
-echo "Setting up GitHub..."
-read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
-if [[ $setup_github =~ ^[Yy]$ ]]; then
-    cd "$(dirname "$0")"
-    if [ -f "./setup_github.sh" ]; then
-        chmod +x ./setup_github.sh
-        ./setup_github.sh
-    else
-        echo "Error: setup_github.sh not found in $(dirname "$0") directory"
-        exit 1
-    fi
-fi
-
 # 2) Setup linux dependencies
 echo "Installing Linux dependencies..."
 apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -43,6 +29,22 @@ git clone https://github.com/kitft/dotfiles.git
 cd dotfiles
 ./install.sh --zsh --tmux
 chsh -s /usr/bin/zsh
+
+# 5)
+echo "Setting up GitHub..."
+read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
+if [[ $setup_github =~ ^[Yy]$ ]]; then
+    cd "$(dirname "$0")"
+    if [ -f "./setup_github.sh" ]; then
+        chmod +x ./setup_github.sh
+        ./setup_github.sh
+    else
+        echo "Error: setup_github.sh not found in $(dirname "$0") directory"
+        exit 1
+    fi
+fi
+
+
 
 # update nodejs/claude code
 
