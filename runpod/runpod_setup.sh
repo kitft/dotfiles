@@ -12,7 +12,8 @@ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     lsof \
     zsh \
     tmux \
-    gh
+    gh \
+    nvim \
 sudo apt-get gh
 
 # 3) Setup Python tools
@@ -31,7 +32,7 @@ cd dotfiles
 chsh -s /usr/bin/zsh
 
 # 5)
-echo "Setting up GitHub..."
+echo "Setting up GitHub... in $(echo pwd)"
 read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
 if [[ $setup_github =~ ^[Yy]$ ]]; then
     cd "$(dirname "$0")"
