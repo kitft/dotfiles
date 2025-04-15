@@ -14,7 +14,8 @@ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     tmux \
     neovim \
 sudo apt update
-sudo apt install gh
+#sudo apt install gh
+sudo apt-get install gh
 
 # 3) Setup Python tools
 echo "Setting up Python tools..."
