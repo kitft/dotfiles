@@ -33,7 +33,7 @@ cd dotfiles
 chsh -s /usr/bin/zsh
 
 # 5)
-echo "Setting up GitHub... in $(echo pwd)"
+echo "Setting up GitHub... in $(pwd)"
 read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
 if [[ $setup_github =~ ^[Yy]$ ]]; then
     cd "$(dirname "$0")"
