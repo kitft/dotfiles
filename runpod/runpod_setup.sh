@@ -26,7 +26,7 @@ uv pip install simple-gpu-scheduler
 
 # 4) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
-mkdir -p /workspace/kitf/git && cd /workspace/kitf/git
+mkdir -p /workspace/kitf && cd /workspace/kitf
 git clone https://github.com/kitft/dotfiles.git
 cd dotfiles
 ./install.sh --zsh --tmux

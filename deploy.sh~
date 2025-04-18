@@ -59,13 +59,41 @@ if [ -n "${ALIASES+x}" ]; then
     done
 fi
 
-echo "changing default shell to zsh"
-sudo chsh -s $(which zsh)
 
 if [[ $SECRETS == "true" ]]; then
 	echo "getting secrets"
 	source "$DOT_DIR/setup_env.sh"
 fi
 
+# Check if the current shell is already zsh
+if [[ "$SHELL" == *"zsh"* ]]; then
+    echo "Your shell is already set to zsh: $SHELL"
+else
+    echo "Current shell is: $SHELL"
+    echo "Changing default shell to zsh..."
+
+    # Check if zsh is installed
+    if command -v zsh &> /dev/null; then
+        ZSH_PATH=$(which zsh)
+        echo "zsh found at: $ZSH_PATH"
+
+        # Check if zsh is in /etc/shells
+        if grep -q "$ZSH_PATH" /etc/shells; then
+            sudo chsh -s "$ZSH_PATH" "$USER"
+            echo "Shell changed to zsh. Please log out and log back in for changes to take effect."
+        else
+            echo "Error: $ZSH_PATH is not in /etc/shells"
+            echo "Adding zsh to /etc/shells first..."
+            echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
+            sudo chsh -s "$ZSH_PATH" "$USER"
+            echo "Shell changed to zsh. Please log out and log back in for changes to take effect."
+        fi
+    else
+        echo "zsh is not installed. Please install zsh first."
+        echo "You can install it with: sudo apt install zsh (Debian/Ubuntu)"
+        echo "or: sudo yum install zsh (CentOS/RHEL)"
+        echo "or: brew install zsh (macOS with Homebrew)"
+    fi
+fi
 
 zsh
