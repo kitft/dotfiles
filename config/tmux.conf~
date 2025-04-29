@@ -11,7 +11,7 @@ bind l select-pane -R
 
 # Make active pane more visible
 set -g pane-border-style fg=colour240
-set -g pane-active-border-style fg=colour51,bold
+set -g pane-active-border-style fg=colour100,bold
 
 # Add status bar improvements
 set -g status-style bg=colour234,fg=colour137
