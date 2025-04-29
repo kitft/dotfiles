@@ -57,44 +57,13 @@ sudo dpkg --remove --force-remove-reinstreq libnode-dev
 curl -fsSL https://deb.nodesource.com/setup_23.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-
-setup_tmux() {
-  echo "Setting up tmux configuration..."
-
-  # Define repo directory - adjust this to match your actual repo location
-  REPO_DIR="$(pwd)"
-
-  # Copy tmux configuration from repo to home directory
-  cp "../config/tmux.conf" ~/.tmux.conf
-
-  # Install TPM (Tmux Plugin Manager)
-  mkdir -p ~/.tmux/plugins
-  if [ ! -d ~/.tmux/plugins/tpm ]; then
-    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-  fi
-
-  # Install plugins manually
-  mkdir -p ~/.tmux/plugins/tmux-resurrect
-  mkdir -p ~/.tmux/plugins/tmux-continuum
-  mkdir -p ~/.tmux/plugins/tmux-sensible
-
-  git clone https://github.com/tmux-plugins/tmux-resurrect ~/.tmux/plugins/tmux-resurrect 2>/dev/null || true
-  git clone https://github.com/tmux-plugins/tmux-continuum ~/.tmux/plugins/tmux-continuum 2>/dev/null || true
-  git clone https://github.com/tmux-plugins/tmux-sensible ~/.tmux/plugins/tmux-sensible 2>/dev/null || true
-
-  # Source the tmux configuration if tmux is running
-  if [ -n "$TMUX" ]; then
-    tmux source-file ~/.tmux.conf
-  fi
-
-  echo "tmux configuration complete!"
-}
-
-# Call the setup_tmux function
-setup_tmux
+# Include the setup_tmux function
+source "../setup_tmux.sh"
+# Or directly include the function definition in your RunPod script
 
 # Claude code
 npm install -g @anthropic-ai/claude-code
 alias workspace="cd /workspace/kitf"
 
 ./deploy.sh --vim # Note: This starts a new shell, ending this script
+

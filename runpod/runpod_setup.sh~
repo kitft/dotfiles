@@ -57,6 +57,8 @@ sudo dpkg --remove --force-remove-reinstreq libnode-dev
 curl -fsSL https://deb.nodesource.com/setup_23.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
+
+
 # Claude code
 npm install -g @anthropic-ai/claude-code
 alias workspace="cd /workspace/kitf"
