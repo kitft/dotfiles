@@ -30,7 +30,14 @@ mkdir -p /workspace/kitf && cd /workspace/kitf
 git clone https://github.com/kitft/dotfiles.git
 cd dotfiles
 ./install.sh --zsh --tmux
-chsh -s /usr/bin/zsh
+
+# Only change shell if not already using zsh
+if [ "$SHELL" != "/usr/bin/zsh" ]; then
+  echo "Changing shell to zsh..."
+  chsh -s /usr/bin/zsh
+else
+  echo "Already using zsh as default shell."
+fi
 
 # 5)
 echo "Setting up GitHub... in $(pwd)"
