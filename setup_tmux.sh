@@ -4,7 +4,7 @@ setup_tmux() {
   # Determine config source - try multiple locations
   if [ -f "./tmux.conf" ]; then
     CONFIG_SOURCE="./tmux.conf"
-  elif [ -f "../config/tmux.conf" ]; then
+  elif [ -f "./config/tmux.conf" ]; then
     CONFIG_SOURCE="../config/tmux.conf"
   elif [ -f "$HOME/dotfiles/tmux.conf" ]; then
     CONFIG_SOURCE="$HOME/dotfiles/tmux.conf"
