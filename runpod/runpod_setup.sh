@@ -53,7 +53,7 @@ if [[ $setup_github =~ ^[Yy]$ ]]; then
     fi
 fi
 
-
+cd /workspace/kitf/dotfiles
 
 # update nodejs/claude code
 

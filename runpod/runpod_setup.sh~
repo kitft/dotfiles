@@ -65,7 +65,7 @@ curl -fsSL https://deb.nodesource.com/setup_23.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Include the setup_tmux function
-source "../setup_tmux.sh"
+source "./setup_tmux.sh"
 # Or directly include the function definition in your RunPod script
 
 # Claude code
