@@ -21,6 +21,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
 uv python install 3.11
 uv pip install --system simple-gpu-scheduler
+uv pip install -U hf_transfer
 
 # 4) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
