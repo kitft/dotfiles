@@ -193,16 +193,9 @@ lgcm() {
     done
 }
 
-# Copy tmux configuration from repo
-cp ./tmux.conf ~/.tmux.conf
-
-# Install TPM (Tmux Plugin Manager)
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-
-# Source the tmux configuration
-tmux source-file ~/.tmux.conf 2>/dev/null || true
-
-# Auto-install plugins (without user interaction)
-~/.tmux/plugins/tpm/bin/install_plugins
-
-echo "tmux configuration complete!"
+# Setup tmux if not already configured
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  if [ -f "$HOME/setup_tmux.sh" ]; then
+    source "$HOME/setup_tmux.sh"
+  fi
+fi

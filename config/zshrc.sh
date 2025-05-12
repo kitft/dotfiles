@@ -199,3 +199,5 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
     source "$HOME/setup_tmux.sh"
   fi
 fi
+
+source ~/.local/bin
