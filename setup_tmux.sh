@@ -1,15 +1,20 @@
 setup_tmux() {
   echo "Setting up tmux configuration..."
 
-  # Determine config source - try multiple locations
+  # Determine config source - try multiple locations relative to script execution dir
   if [ -f "./tmux.conf" ]; then
     CONFIG_SOURCE="./tmux.conf"
   elif [ -f "./config/tmux.conf" ]; then
-    CONFIG_SOURCE="../config/tmux.conf"
+    # Use the relative path that was successfully checked
+    CONFIG_SOURCE="./config/tmux.conf"
   elif [ -f "$HOME/dotfiles/tmux.conf" ]; then
+    # This assumes dotfiles are cloned directly into $HOME
     CONFIG_SOURCE="$HOME/dotfiles/tmux.conf"
+  elif [ -f "$HOME/dotfiles/config/tmux.conf" ]; then
+     # Add check for config subdir under $HOME/dotfiles
+     CONFIG_SOURCE="$HOME/dotfiles/config/tmux.conf"
   else
-    echo "Warning: tmux config file not found"
+    echo "Warning: tmux config file not found in expected locations (./tmux.conf, ./config/tmux.conf, $HOME/dotfiles/tmux.conf, $HOME/dotfiles/config/tmux.conf)"
     return 1
   fi
 
