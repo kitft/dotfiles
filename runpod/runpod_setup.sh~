@@ -13,16 +13,14 @@ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     zsh \
     tmux \
     neovim \
-sudo apt-get update
-#sudo apt install gh
-sudo apt-get install gh
+    gh
 
 # 3) Setup Python tools
 echo "Setting up Python tools..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
 uv python install 3.11
-uv pip install simple-gpu-scheduler
+uv pip install --system simple-gpu-scheduler
 
 # 4) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
@@ -43,17 +41,16 @@ fi
 echo "Setting up GitHub... in $(pwd)"
 read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
 if [[ $setup_github =~ ^[Yy]$ ]]; then
-    cd "$(dirname "$0")"
     if [ -f "./setup_github.sh" ]; then
         chmod +x ./setup_github.sh
         ./setup_github.sh
     else
-        echo "Error: setup_github.sh not found in $(dirname "$0") directory"
+        echo "Error: setup_github.sh not found in $(pwd) directory"
         exit 1
     fi
 fi
 
-
+cd /workspace/kitf/dotfiles
 
 # update nodejs/claude code
 

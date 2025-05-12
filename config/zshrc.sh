@@ -200,4 +200,5 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   fi
 fi
 
+export HF_HUB_ENABLE_HF_TRANSFER=1
 source ~/.local/bin
