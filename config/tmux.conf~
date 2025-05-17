@@ -25,6 +25,12 @@ set -g status-right-length 100    # Default is often 40
 set -g status-left-length 50      # Default is often 10
 set -g pane-border-status top
 
+# Define variable for pane title width
+set-option -g @pane_title_width "40"
+
+# Use the variable in status-right
+set-option -g status-right "#(/home/kitf/.tmux/plugins/tmux-continuum/scripts/continuum_save.sh)#{?window_bigger,[#{window_offset_x}#,#{window_offset_y}] ,}#{=#{@pane_title_width}:pane_title} %H:%M %d-%b-%y"
+
 # Enable mouse mode (tmux 2.1+)
 set -g mouse on
 
