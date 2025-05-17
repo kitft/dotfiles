@@ -2,7 +2,7 @@
 
 # 2) Setup linux dependencies
 echo "Installing Linux dependencies..."
-apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get install -y \
     sudo \
     less \
     nano \
