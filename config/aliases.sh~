@@ -198,4 +198,4 @@ qrun() {
 alias uvinstall="uv pip install --update-requirements requirements.txt"
 
 alias getenvs="/workspace/kitf/setup_env.sh"
-alis vim="nvim"
+alias vim="nvim"
