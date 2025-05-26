@@ -4,6 +4,15 @@ email=${1:-"kitfrasertaliente@gmail.com"}
 name=${2:-"Kit FT"}
 github_url=${3:-""}
 
+# Define persistent SSH directory for RunPod
+PERSISTENT_SSH_DIR="/workspace/kitf/.ssh"
+HOME_SSH_DIR="$HOME/.ssh"
+
+# Check if running in RunPod environment
+if [ -d "/workspace/kitf" ]; then
+    echo "📁 RunPod environment detected. Using persistent storage at /workspace/kitf/"
+fi
+
 # 0) Setup git
 git config --global user.email "$email"
 git config --global user.name "$name"
@@ -16,15 +25,24 @@ if [[ "$setup_github" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     if command -v gh &> /dev/null; then
         echo "Using GitHub CLI for authentication (supports 2FA)..."
 
-        # Login with GitHub CLI (this will handle 2FA automatically)
-        gh auth login
+        # Set GitHub CLI config directory to persistent location
+        export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
+        mkdir -p "$GH_CONFIG_DIR"
 
-        # Verify authentication worked
+        # Check if already authenticated
         if gh auth status > /dev/null 2>&1; then
-            echo "✅ Successfully authenticated with GitHub!"
+            echo "✅ Already authenticated with GitHub CLI!"
         else
-            echo "❌ GitHub authentication failed."
-            exit 1
+            # Login with GitHub CLI (this will handle 2FA automatically)
+            gh auth login
+
+            # Verify authentication worked
+            if gh auth status > /dev/null 2>&1; then
+                echo "✅ Successfully authenticated with GitHub!"
+            else
+                echo "❌ GitHub authentication failed."
+                exit 1
+            fi
         fi
 
         # Configure GitHub CLI to use SSH
@@ -33,23 +51,51 @@ if [[ "$setup_github" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         # Fallback to manual SSH key setup if gh CLI is not available
         echo "GitHub CLI not found. Setting up manual SSH key..."
 
-        # Generate SSH key if it doesn't exist
-        SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
-        if [ ! -f "$SSH_KEY_PATH" ]; then
-            ssh-keygen -t ed25519 -C "$email" -f "$SSH_KEY_PATH"
+        # Create directories if they don't exist
+        mkdir -p "$PERSISTENT_SSH_DIR"
+        mkdir -p "$HOME_SSH_DIR"
+
+        # Define key paths
+        PERSISTENT_KEY_PATH="$PERSISTENT_SSH_DIR/id_ed25519"
+        HOME_KEY_PATH="$HOME_SSH_DIR/id_ed25519"
+
+        # Check if key exists in persistent location
+        if [ -f "$PERSISTENT_KEY_PATH" ]; then
+            echo "Found existing SSH key in $PERSISTENT_SSH_DIR"
+            
+            # Copy keys to home directory if not already there
+            if [ ! -f "$HOME_KEY_PATH" ]; then
+                echo "Copying SSH keys to $HOME_SSH_DIR..."
+                cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
+                cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
+                chmod 600 "$HOME_KEY_PATH"
+                chmod 644 "$HOME_KEY_PATH.pub"
+            fi
+        else
+            # Generate new SSH key
+            echo "Generating new SSH key..."
+            ssh-keygen -t ed25519 -C "$email" -f "$PERSISTENT_KEY_PATH" -N ""
+            
+            # Copy to home directory
+            cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
+            cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
+            chmod 600 "$HOME_KEY_PATH"
+            chmod 644 "$HOME_KEY_PATH.pub"
+            chmod 600 "$PERSISTENT_KEY_PATH"
+            chmod 644 "$PERSISTENT_KEY_PATH.pub"
+            
+            # Display the public key for first-time setup
+            echo "Your NEW SSH public key:"
+            cat "$PERSISTENT_KEY_PATH.pub"
+            read -p "Have you added the SSH key to https://github.com/settings/keys? (y/Y/yes to continue): " response
+            while [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; do
+                read -p "Please type 'y', 'Y', or 'yes' after adding the SSH key: " response
+            done
         fi
 
         # Start SSH agent
         eval "$(ssh-agent -s)"
-        ssh-add "$SSH_KEY_PATH"
-
-        # Display the public key
-        echo "Your SSH public key:"
-        cat "$SSH_KEY_PATH.pub"
-        read -p "Have you added the SSH key to https://github.com/settings/keys? (y/Y/yes to continue): " response
-        while [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; do
-            read -p "Please type 'y', 'Y', or 'yes' after adding the SSH key: " response
-        done
+        ssh-add "$HOME_KEY_PATH"
 
         # Test SSH connection to GitHub
         ssh -T git@github.com -o StrictHostKeyChecking=no || true
