@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Host runpod-1x
+#     User root
+#     ProxyCommand bash -c 'read ip port < <(~/bin/runpod-resolve.sh nate-1x); exec nc $ip $port'
+#     ForwardAgent yes
+#     IdentityFile ~/.ssh/id_ed25519
+
+pod_name="$1"
+if [ -z "$pod_name" ]; then
+    echo "Usage: $0 <pod-name>" >&2
+    exit 1
+fi
+
+pods=$(runpodctl get pod -a | grep RUNNING)
+
+pod_info=$(echo "$pods" | grep -i "$pod_name" | head -1)
+
+if [ -z "$pod_info" ]; then
+    echo "Pod '$pod_name' not found or not running." >&2
+    exit 1
+fi
+
+ip_port=$(echo "$pod_info" | awk -F, '{for(i=1;i<=NF;i++) if($i ~ /->22/) print $i}' \
+          | awk '{match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+/); print substr($0, RSTART, RLENGTH)}')
+
+if [ -z "$ip_port" ]; then
+    echo "Could not extract IP:PORT from pod info." >&2
+    exit 2
+fi
+
+ip=$(echo "$ip_port" | cut -d':' -f1)
+port=$(echo "$ip_port" | cut -d':' -f2 | cut -d'-' -f1)
+
+echo "$ip $port"

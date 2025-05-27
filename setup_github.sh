@@ -11,6 +11,23 @@ HOME_SSH_DIR="$HOME/.ssh"
 # Check if running in RunPod environment
 if [ -d "/workspace/kitf" ]; then
     echo "📁 RunPod environment detected. Using persistent storage at /workspace/kitf/"
+    
+    # Add GH_CONFIG_DIR to shell configs for persistence
+    export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
+    
+    # Add to .bashrc if it exists
+    if [ -f "$HOME/.bashrc" ]; then
+        if ! grep -q "export GH_CONFIG_DIR=" "$HOME/.bashrc"; then
+            echo 'export GH_CONFIG_DIR="/workspace/kitf/.config/gh"' >> "$HOME/.bashrc"
+        fi
+    fi
+    
+    # Add to .zshrc if it exists
+    if [ -f "$HOME/.zshrc" ]; then
+        if ! grep -q "export GH_CONFIG_DIR=" "$HOME/.zshrc"; then
+            echo 'export GH_CONFIG_DIR="/workspace/kitf/.config/gh"' >> "$HOME/.zshrc"
+        fi
+    fi
 fi
 
 # 0) Setup git
@@ -25,7 +42,7 @@ if [[ "$setup_github" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     if command -v gh &> /dev/null; then
         echo "Using GitHub CLI for authentication (supports 2FA)..."
 
-        # Set GitHub CLI config directory to persistent location
+        # Always set and export GitHub CLI config directory to persistent location
         export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
         mkdir -p "$GH_CONFIG_DIR"
 
