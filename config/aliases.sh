@@ -202,17 +202,18 @@ alias getenvs="/workspace/kitf/setup_env.sh"
 alias vim="nvim"
 
 lessrf() {
-    less +F -r *"$1"*
+    less +F -r logs/*"$1"*
 }
 lessrfe() {
-    less +F -r *"$1"*.err
+    less +F -r logs/*"$1"*.err
 }
 lessrfo() {
-    less +F -r *"$1"*.out
+    less +F -r logs/*"$1"*.out
 }
 vimp() {
     local files=""
     for arg in "$@"; do
+        files="$files logs/*$arg*"
         files="$files *$arg*"
     done
     vim -p $files

@@ -1,4 +1,5 @@
 # -------------------------------------------------------------------
+# o
 # personal
 # -------------------------------------------------------------------
 
@@ -199,3 +200,20 @@ alias uvinstall="uv pip install --update-requirements requirements.txt"
 
 alias getenvs="/workspace/kitf/setup_env.sh"
 alias vim="nvim"
+
+lessrf() {
+    less +F -r *"$1"*
+}
+lessrfe() {
+    less +F -r *"$1"*.err
+}
+lessrfo() {
+    less +F -r *"$1"*.out
+}
+vimp() {
+    local files=""
+    for arg in "$@"; do
+        files="$files *$arg*"
+    done
+    vim -p $files
+}
