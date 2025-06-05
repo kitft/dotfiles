@@ -10,9 +10,6 @@ HOME_SSH_DIR="$HOME/.ssh"
 
 echo "Current user: $(whoami)"
 echo "HOME directory: $HOME"
-echo "Checking for SSH keys in:"
-echo "  - Persistent: $PERSISTENT_SSH_DIR"
-echo "  - Home: $HOME_SSH_DIR"
 
 # Check if running in RunPod environment
 if [ -d "/workspace/kitf" ]; then
@@ -40,28 +37,43 @@ fi
 git config --global user.email "$email"
 git config --global user.name "$name"
 
-# 1) Check for existing credentials
-echo "Checking GitHub authentication..."
-
-# Check if GitHub CLI exists and is authenticated
+# 1) Setup GitHub CLI authentication FIRST
+echo "Setting up GitHub CLI authentication..."
 if command -v gh &> /dev/null; then
     export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
     mkdir -p "$GH_CONFIG_DIR"
     
     if gh auth status > /dev/null 2>&1; then
         echo "✅ Already authenticated with GitHub CLI!"
-        gh config set git_protocol ssh
     else
-        echo "GitHub CLI not authenticated."
+        echo "🔐 Logging in with GitHub CLI..."
+        gh auth login
+        
+        if gh auth status > /dev/null 2>&1; then
+            echo "✅ Successfully authenticated with GitHub!"
+        else
+            echo "❌ GitHub authentication failed."
+        fi
     fi
+    
+    # Configure GitHub CLI to use SSH
+    gh config set git_protocol ssh
+else
+    echo "❌ GitHub CLI not found. Please install it first."
 fi
 
-# Handle SSH keys
+# 2) Handle SSH keys
 mkdir -p "$PERSISTENT_SSH_DIR"
 mkdir -p "$HOME_SSH_DIR"
 
 PERSISTENT_KEY_PATH="$PERSISTENT_SSH_DIR/id_ed25519"
 HOME_KEY_PATH="$HOME_SSH_DIR/id_ed25519"
+ROOT_KEY_PATH="/root/.ssh/id_ed25519"
+
+echo "Checking for SSH keys in:"
+echo "  - Persistent: $PERSISTENT_SSH_DIR"
+echo "  - Home: $HOME_SSH_DIR"
+echo "  - Root: /root/.ssh"
 
 # Check all possible locations for existing keys
 key_found=false
@@ -79,6 +91,21 @@ elif [ -f "$HOME_KEY_PATH" ]; then
     if [ ! -f "$PERSISTENT_KEY_PATH" ] && [ -d "/workspace/kitf" ]; then
         cp "$HOME_KEY_PATH" "$PERSISTENT_KEY_PATH"
         cp "$HOME_KEY_PATH.pub" "$PERSISTENT_KEY_PATH.pub"
+        chmod 600 "$PERSISTENT_KEY_PATH"
+        chmod 644 "$PERSISTENT_KEY_PATH.pub"
+    fi
+    key_found=true
+elif [ -f "$ROOT_KEY_PATH" ] && [ "$HOME" != "/root" ]; then
+    echo "✅ Found existing SSH key in /root/.ssh"
+    # Copy from root to persistent and home
+    cp "$ROOT_KEY_PATH" "$HOME_KEY_PATH"
+    cp "$ROOT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
+    chmod 600 "$HOME_KEY_PATH"
+    chmod 644 "$HOME_KEY_PATH.pub"
+    
+    if [ -d "/workspace/kitf" ]; then
+        cp "$ROOT_KEY_PATH" "$PERSISTENT_KEY_PATH"
+        cp "$ROOT_KEY_PATH.pub" "$PERSISTENT_KEY_PATH.pub"
         chmod 600 "$PERSISTENT_KEY_PATH"
         chmod 644 "$PERSISTENT_KEY_PATH.pub"
     fi
