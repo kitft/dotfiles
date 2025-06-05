@@ -41,7 +41,7 @@ else
 fi
 
 # 5) Setup GitHub automatically
-echo "Setting up GitHub... in $(pwd)"
+echo "Setting up GitHub..."
 if [ -f "./setup_github.sh" ]; then
     chmod +x ./setup_github.sh
     ./setup_github.sh
