@@ -35,7 +35,7 @@ cd dotfiles
 # Only change shell if not already using zsh
 if [ "$SHELL" != "/usr/bin/zsh" ]; then
   echo "Changing shell to zsh..."
-  chsh -s /usr/bin/zsh
+  sudo chsh -s /usr/bin/zsh
 else
   echo "Already using zsh as default shell."
 fi
