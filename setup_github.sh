@@ -35,128 +35,98 @@ git config --global user.email "$email"
 git config --global user.name "$name"
 
 # 1) Setup GitHub authentication
-echo "Setting up GitHub in setup_github.sh..."
-read -p "Would you like to set up GitHub credentials? Try using CLI, then SSH key (y/n) " setup_github
-if [[ "$setup_github" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    # Check if GitHub CLI exists
-    if command -v gh &> /dev/null; then
-        echo "Using GitHub CLI for authentication (supports 2FA)..."
+echo "Checking GitHub authentication..."
 
-        # Always set and export GitHub CLI config directory to persistent location
-        export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
-        mkdir -p "$GH_CONFIG_DIR"
-
-        # Check if already authenticated
-        if gh auth status > /dev/null 2>&1; then
-            echo "✅ Already authenticated with GitHub CLI!"
-        else
-            # Login with GitHub CLI (this will handle 2FA automatically)
+# Check if GitHub CLI exists
+if command -v gh &> /dev/null; then
+    echo "GitHub CLI found..."
+    
+    # Always set and export GitHub CLI config directory to persistent location
+    export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
+    mkdir -p "$GH_CONFIG_DIR"
+    
+    # Check if already authenticated
+    if gh auth status > /dev/null 2>&1; then
+        echo "✅ Already authenticated with GitHub CLI!"
+    else
+        echo "Not authenticated with GitHub CLI. Setting up..."
+        read -p "Would you like to authenticate with GitHub CLI? (y/n) " setup_gh_cli
+        if [[ "$setup_gh_cli" =~ ^([yY][eE][sS]|[yY])$ ]]; then
             gh auth login
-
-            # Verify authentication worked
+            
             if gh auth status > /dev/null 2>&1; then
                 echo "✅ Successfully authenticated with GitHub!"
             else
                 echo "❌ GitHub authentication failed."
-                exit 1
             fi
         fi
-
-        # Configure GitHub CLI to use SSH
-        gh config set git_protocol ssh
-        
-        # Handle SSH keys for GitHub CLI
-        mkdir -p "$PERSISTENT_SSH_DIR"
-        mkdir -p "$HOME_SSH_DIR"
-        
-        PERSISTENT_KEY_PATH="$PERSISTENT_SSH_DIR/id_ed25519"
-        HOME_KEY_PATH="$HOME_SSH_DIR/id_ed25519"
-        
-        # Check if key exists in persistent location
-        if [ -f "$PERSISTENT_KEY_PATH" ]; then
-            echo "Found existing SSH key in $PERSISTENT_SSH_DIR"
-            # Copy to home if needed
-            if [ ! -f "$HOME_KEY_PATH" ]; then
-                echo "Copying SSH keys to $HOME_SSH_DIR..."
-                cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
-                cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
-                chmod 600 "$HOME_KEY_PATH"
-                chmod 644 "$HOME_KEY_PATH.pub"
-            fi
-        else
-            # Generate new SSH key
-            echo "Generating SSH key for GitHub CLI..."
-            ssh-keygen -t ed25519 -C "$email" -f "$PERSISTENT_KEY_PATH" -N ""
-            
-            # Copy to home directory
-            cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
-            cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
-            chmod 600 "$HOME_KEY_PATH"
-            chmod 644 "$HOME_KEY_PATH.pub"
-            chmod 600 "$PERSISTENT_KEY_PATH"
-            chmod 644 "$PERSISTENT_KEY_PATH.pub"
-            
-            echo "Your SSH public key:"
-            cat "$PERSISTENT_KEY_PATH.pub"
-            echo "Add this key to https://github.com/settings/keys"
-        fi
-        
-        # Start SSH agent and add key
-        eval "$(ssh-agent -s)"
-        ssh-add "$HOME_KEY_PATH"
-    else
-        # Fallback to manual SSH key setup if gh CLI is not available
-        echo "GitHub CLI not found. Setting up manual SSH key..."
-
-        # Create directories if they don't exist
-        mkdir -p "$PERSISTENT_SSH_DIR"
-        mkdir -p "$HOME_SSH_DIR"
-
-        # Define key paths
-        PERSISTENT_KEY_PATH="$PERSISTENT_SSH_DIR/id_ed25519"
-        HOME_KEY_PATH="$HOME_SSH_DIR/id_ed25519"
-
-        # Check if key exists in persistent location
-        if [ -f "$PERSISTENT_KEY_PATH" ]; then
-            echo "Found existing SSH key in $PERSISTENT_SSH_DIR"
-            
-            # Copy keys to home directory if not already there
-            if [ ! -f "$HOME_KEY_PATH" ]; then
-                echo "Copying SSH keys to $HOME_SSH_DIR..."
-                cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
-                cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
-                chmod 600 "$HOME_KEY_PATH"
-                chmod 644 "$HOME_KEY_PATH.pub"
-            fi
-        else
-            # Generate new SSH key
-            echo "Generating new SSH key..."
-            ssh-keygen -t ed25519 -C "$email" -f "$PERSISTENT_KEY_PATH" -N ""
-            
-            # Copy to home directory
-            cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
-            cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
-            chmod 600 "$HOME_KEY_PATH"
-            chmod 644 "$HOME_KEY_PATH.pub"
-            chmod 600 "$PERSISTENT_KEY_PATH"
-            chmod 644 "$PERSISTENT_KEY_PATH.pub"
-            
-            # Display the public key for first-time setup
-            echo "Your NEW SSH public key:"
-            cat "$PERSISTENT_KEY_PATH.pub"
-            read -p "Have you added the SSH key to https://github.com/settings/keys? (y/Y/yes to continue): " response
-            while [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; do
-                read -p "Please type 'y', 'Y', or 'yes' after adding the SSH key: " response
-            done
-        fi
-
-        # Start SSH agent
-        eval "$(ssh-agent -s)"
-        ssh-add "$HOME_KEY_PATH"
-
-        # Test SSH connection to GitHub
-        ssh -T git@github.com -o StrictHostKeyChecking=no || true
     fi
+    
+    # Configure GitHub CLI to use SSH
+    gh config set git_protocol ssh
+fi
+
+# Handle SSH keys
+mkdir -p "$PERSISTENT_SSH_DIR"
+mkdir -p "$HOME_SSH_DIR"
+
+PERSISTENT_KEY_PATH="$PERSISTENT_SSH_DIR/id_ed25519"
+HOME_KEY_PATH="$HOME_SSH_DIR/id_ed25519"
+
+# Check if key exists in persistent location
+if [ -f "$PERSISTENT_KEY_PATH" ]; then
+    echo "✅ Found existing SSH key in $PERSISTENT_SSH_DIR"
+    # Copy to home if needed
+    if [ ! -f "$HOME_KEY_PATH" ]; then
+        echo "Copying SSH keys to $HOME_SSH_DIR..."
+        cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
+        cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
+        chmod 600 "$HOME_KEY_PATH"
+        chmod 644 "$HOME_KEY_PATH.pub"
+    fi
+elif [ -f "$HOME_KEY_PATH" ]; then
+    echo "✅ Found existing SSH key in $HOME_SSH_DIR"
+    # Copy to persistent location if needed
+    if [ ! -f "$PERSISTENT_KEY_PATH" ]; then
+        echo "Backing up SSH keys to $PERSISTENT_SSH_DIR..."
+        cp "$HOME_KEY_PATH" "$PERSISTENT_KEY_PATH"
+        cp "$HOME_KEY_PATH.pub" "$PERSISTENT_KEY_PATH.pub"
+        chmod 600 "$PERSISTENT_KEY_PATH"
+        chmod 644 "$PERSISTENT_KEY_PATH.pub"
+    fi
+else
+    # No SSH key exists - ask if user wants to create one
+    echo "No SSH key found."
+    read -p "Would you like to generate a new SSH key? (y/n) " generate_ssh
+    if [[ "$generate_ssh" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        echo "Generating new SSH key..."
+        ssh-keygen -t ed25519 -C "$email" -f "$PERSISTENT_KEY_PATH" -N ""
+        
+        # Copy to home directory
+        cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
+        cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
+        chmod 600 "$HOME_KEY_PATH"
+        chmod 644 "$HOME_KEY_PATH.pub"
+        chmod 600 "$PERSISTENT_KEY_PATH"
+        chmod 644 "$PERSISTENT_KEY_PATH.pub"
+        
+        echo "Your NEW SSH public key:"
+        cat "$PERSISTENT_KEY_PATH.pub"
+        read -p "Have you added the SSH key to https://github.com/settings/keys? (y/Y/yes to continue): " response
+        while [[ ! "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; do
+            read -p "Please type 'y', 'Y', or 'yes' after adding the SSH key: " response
+        done
+    fi
+fi
+
+# Start SSH agent and add key if it exists
+if [ -f "$HOME_KEY_PATH" ]; then
+    eval "$(ssh-agent -s)"
+    ssh-add "$HOME_KEY_PATH"
+    
+    # Test SSH connection to GitHub
+    echo "Testing SSH connection to GitHub..."
+    ssh -T git@github.com -o StrictHostKeyChecking=no || true
 fi
 
 # 2) Project specific setup (if github_url is provided)

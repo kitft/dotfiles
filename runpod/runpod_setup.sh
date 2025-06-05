@@ -40,17 +40,14 @@ else
   echo "Already using zsh as default shell."
 fi
 
-# 5)
+# 5) Setup GitHub automatically
 echo "Setting up GitHub... in $(pwd)"
-read -p "Would you like to set up GitHub credentials with setup_github.sh? (y/n) " setup_github
-if [[ $setup_github =~ ^[Yy]$ ]]; then
-    if [ -f "./setup_github.sh" ]; then
-        chmod +x ./setup_github.sh
-        ./setup_github.sh
-    else
-        echo "Error: setup_github.sh not found in $(pwd) directory"
-        exit 1
-    fi
+if [ -f "./setup_github.sh" ]; then
+    chmod +x ./setup_github.sh
+    ./setup_github.sh
+else
+    echo "Error: setup_github.sh not found in $(pwd) directory"
+    exit 1
 fi
 
 cd /workspace/kitf/dotfiles
