@@ -1,0 +1,51 @@
+#!/bin/bash
+# Save this as ~/bin/sshr-add or similar
+
+add_runpod_host() {
+    local alias_name="$1"
+    local actual_name="$2"
+
+    # If no actual_name provided, use alias_name
+    if [ -z "$actual_name" ]; then
+        actual_name="$alias_name"
+    fi
+
+    # Check if host already exists in SSH config
+    if grep -q "^Host $alias_name$" ~/.ssh/config 2>/dev/null; then
+        echo "Host '$alias_name' already exists in SSH config"
+        return 1
+    fi
+
+    # Add the host configuration
+    cat >> ~/.ssh/config <<EOF
+
+Host $alias_name
+    User root
+    ProxyCommand bash -c 'read ip port < <(~/Documents/Config/dotfiles/runpod-resolve.sh $actual_name); exec nc \$ip \$port'
+    ForwardAgent yes
+    IdentityFile ~/.ssh/id_ed25519
+EOF
+
+    echo "Added SSH config for '$alias_name' (resolves to '$actual_name')"
+}
+
+# Usage examples:
+case "$1" in
+    "add")
+        shift
+        add_runpod_host "$@"
+        ;;
+    "list")
+        echo "Runpod hosts in SSH config:"
+        grep -B1 "runpod-resolve.sh" ~/.ssh/config | grep "^Host" | awk '{print $2}'
+        ;;
+    *)
+        echo "Usage:"
+        echo "  $0 add <alias> [<actual-runpod-name>]"
+        echo "  $0 list"
+        echo ""
+        echo "Examples:"
+        echo "  $0 add kit-rl-small-4              # Direct name"
+        echo "  $0 add kit4 kit-rl-small-4         # With alias"
+        ;;
+esac
