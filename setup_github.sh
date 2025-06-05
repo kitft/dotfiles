@@ -8,6 +8,12 @@ github_url=${3:-""}
 PERSISTENT_SSH_DIR="/workspace/kitf/.ssh"
 HOME_SSH_DIR="$HOME/.ssh"
 
+echo "Current user: $(whoami)"
+echo "HOME directory: $HOME"
+echo "Checking for SSH keys in:"
+echo "  - Persistent: $PERSISTENT_SSH_DIR"
+echo "  - Home: $HOME_SSH_DIR"
+
 # Check if running in RunPod environment
 if [ -d "/workspace/kitf" ]; then
     echo "📁 RunPod environment detected. Using persistent storage at /workspace/kitf/"
@@ -46,7 +52,7 @@ if command -v gh &> /dev/null; then
         echo "✅ Already authenticated with GitHub CLI!"
         gh config set git_protocol ssh
     else
-        echo "GitHub CLI not authenticated. Please authenticate manually if needed."
+        echo "GitHub CLI not authenticated."
     fi
 fi
 
@@ -57,7 +63,8 @@ mkdir -p "$HOME_SSH_DIR"
 PERSISTENT_KEY_PATH="$PERSISTENT_SSH_DIR/id_ed25519"
 HOME_KEY_PATH="$HOME_SSH_DIR/id_ed25519"
 
-# Check if key exists and copy between locations
+# Check all possible locations for existing keys
+key_found=false
 if [ -f "$PERSISTENT_KEY_PATH" ]; then
     echo "✅ Found existing SSH key in persistent storage"
     if [ ! -f "$HOME_KEY_PATH" ]; then
@@ -66,6 +73,7 @@ if [ -f "$PERSISTENT_KEY_PATH" ]; then
         chmod 600 "$HOME_KEY_PATH"
         chmod 644 "$HOME_KEY_PATH.pub"
     fi
+    key_found=true
 elif [ -f "$HOME_KEY_PATH" ]; then
     echo "✅ Found existing SSH key in home directory"
     if [ ! -f "$PERSISTENT_KEY_PATH" ] && [ -d "/workspace/kitf" ]; then
@@ -74,14 +82,51 @@ elif [ -f "$HOME_KEY_PATH" ]; then
         chmod 600 "$PERSISTENT_KEY_PATH"
         chmod 644 "$PERSISTENT_KEY_PATH.pub"
     fi
-else
-    echo "No SSH key found. Run this script manually to set up GitHub credentials."
+    key_found=true
+fi
+
+# If no key found, create one automatically
+if [ "$key_found" = false ]; then
+    echo "No SSH key found. Creating new SSH key for GitHub..."
+    
+    # Generate key in persistent location if available, otherwise in home
+    if [ -d "/workspace/kitf" ]; then
+        target_key="$PERSISTENT_KEY_PATH"
+    else
+        target_key="$HOME_KEY_PATH"
+    fi
+    
+    ssh-keygen -t ed25519 -C "$email" -f "$target_key" -N ""
+    
+    # Copy to both locations
+    if [ "$target_key" = "$PERSISTENT_KEY_PATH" ] && [ ! -f "$HOME_KEY_PATH" ]; then
+        cp "$PERSISTENT_KEY_PATH" "$HOME_KEY_PATH"
+        cp "$PERSISTENT_KEY_PATH.pub" "$HOME_KEY_PATH.pub"
+        chmod 600 "$HOME_KEY_PATH"
+        chmod 644 "$HOME_KEY_PATH.pub"
+    elif [ "$target_key" = "$HOME_KEY_PATH" ] && [ -d "/workspace/kitf" ]; then
+        cp "$HOME_KEY_PATH" "$PERSISTENT_KEY_PATH"
+        cp "$HOME_KEY_PATH.pub" "$PERSISTENT_KEY_PATH.pub"
+        chmod 600 "$PERSISTENT_KEY_PATH"
+        chmod 644 "$PERSISTENT_KEY_PATH.pub"
+    fi
+    
+    echo "📋 Your NEW SSH public key:"
+    cat "${target_key}.pub"
+    echo ""
+    echo "⚠️  Add this key to https://github.com/settings/keys"
+    echo "Press Enter when you've added the key to GitHub..."
+    read -r
 fi
 
 # Start SSH agent and add key if it exists
 if [ -f "$HOME_KEY_PATH" ]; then
     eval "$(ssh-agent -s)"
     ssh-add "$HOME_KEY_PATH"
+    
+    # Test connection
+    echo "Testing SSH connection to GitHub..."
+    ssh -T git@github.com -o StrictHostKeyChecking=no || true
 fi
 
 # 2) Project specific setup (if github_url is provided)
