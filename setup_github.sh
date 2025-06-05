@@ -31,6 +31,9 @@ if [ -d "/workspace/kitf" ]; then
             echo 'export GH_CONFIG_DIR="/workspace/kitf/.config/gh"' >> "$HOME/.zshrc"
         fi
     fi
+    
+    echo "ℹ️  Added GH_CONFIG_DIR to shell configs."
+    echo "ℹ️  To use gh in this session, run: export GH_CONFIG_DIR=\"/workspace/kitf/.config/gh\""
 fi
 
 # 0) Setup git
@@ -40,7 +43,6 @@ git config --global user.name "$name"
 # 1) Setup GitHub CLI authentication FIRST
 echo "Setting up GitHub CLI authentication..."
 if command -v gh &> /dev/null; then
-    export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
     mkdir -p "$GH_CONFIG_DIR"
     
     if gh auth status > /dev/null 2>&1; then
@@ -192,3 +194,9 @@ echo "setting credential store"
 git config --global credential.helper store
 
 echo "GitHub setup complete!"
+if [ -d "/workspace/kitf" ]; then
+    echo ""
+    echo "⚠️  IMPORTANT: To use GitHub CLI in this session, run:"
+    echo "    export GH_CONFIG_DIR=\"/workspace/kitf/.config/gh\""
+    echo "Or start a new shell session for the changes to take effect."
+fi
