@@ -22,8 +22,8 @@ echo "Setting up Python tools..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
 uv python install 3.11
-uv pip install --system simple-gpu-scheduler
-uv pip install -U hf_transfer
+sudo uv pip install --system simple-gpu-scheduler
+sudo uv pip install --system -U hf_transfer
 
 # 4) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
@@ -66,7 +66,13 @@ source "./setup_tmux.sh"
 # Or directly include the function definition in your RunPod script
 
 # Claude code
+# Configure npm to use a user-writable directory
+mkdir -p /workspace/kitf/.npm-global
+npm config set prefix /workspace/kitf/.npm-global
+echo 'export PATH=/workspace/kitf/.npm-global/bin:$PATH' >> ~/.zshrc
+export PATH=/workspace/kitf/.npm-global/bin:$PATH
 npm install -g @anthropic-ai/claude-code
+
 alias workspace="cd /workspace/kitf"
 
 ./deploy.sh --vim # Note: This starts a new shell, ending this script
