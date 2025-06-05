@@ -31,6 +31,12 @@ if [ -d "/workspace/kitf" ]; then
             echo 'export GH_CONFIG_DIR="/workspace/kitf/.config/gh"' >> "$HOME/.zshrc"
         fi
     fi
+
+    if [ -f "/workspace/kitf/dotfiles/config/zshrc.sh" ]; then
+        if ! grep -q "export GH_CONFIG_DIR=" "/workspace/kitf/dotfiles/config/zshrc.sh"; then
+            echo 'export GH_CONFIG_DIR="/workspace/kitf/.config/gh"' >> "/workspace/kitf/dotfiles/config/zshrc.sh"
+        fi
+    fi
     
     echo "ℹ️  Added GH_CONFIG_DIR to shell configs."
     echo "ℹ️  To use gh in this session, run: export GH_CONFIG_DIR=\"/workspace/kitf/.config/gh\""
