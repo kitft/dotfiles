@@ -196,6 +196,7 @@ if [ -n "$github_url" ]; then
     fi
 fi
 
+
 echo "setting credential store"
 git config --global credential.helper store
 
@@ -205,4 +206,6 @@ if [ -d "/workspace/kitf" ]; then
     echo "⚠️  IMPORTANT: To use GitHub CLI in this session, run:"
     echo "    export GH_CONFIG_DIR=\"/workspace/kitf/.config/gh\""
     echo "Or start a new shell session for the changes to take effect."
+    export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
 fi
+

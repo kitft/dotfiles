@@ -202,17 +202,86 @@ alias getenvs="/workspace/kitf/setup_env.sh"
 alias vim="nvim"
 
 lessrf() {
-    less +F -r *"$1"*
+    less +F -r logs/*"$1"*
 }
 lessrfe() {
-    less +F -r *"$1"*.err
+    less +F -r logs/*"$1"*.err
 }
 lessrfo() {
-    less +F -r *"$1"*.out
+    less +F -r logs/*"$1"*.out
 }
 vimp() {
     local files=""
     for arg in "$@"; do
+        files="$files logs/*$arg*"
+        files="$files *$arg*"
+    done
+    vim -p $files
+}
+lessrf() {
+    local files=()
+    local err_files=()
+    local out_files=()
+
+    # Find and sort .err files by modification time (newest first)
+    while IFS= read -r -d '' file; do
+        err_files+=("$file")
+    done < <(find logs -name "*$1*.err" -type f -printf '%T@\t%p\0' 2>/dev/null | sort -zrn | cut -f2-)
+
+    # Find and sort .out files by modification time (newest first)
+    while IFS= read -r -d '' file; do
+        out_files+=("$file")
+    done < <(find logs -name "*$1*.out" -type f -printf '%T@\t%p\0' 2>/dev/null | sort -zrn | cut -f2-)
+
+    # Interleave err and out files
+    local max_len=${#err_files[@]}
+    [[ ${#out_files[@]} -gt $max_len ]] && max_len=${#out_files[@]}
+
+    for ((i=0; i<max_len; i++)); do
+        [[ $i -lt ${#err_files[@]} ]] && files+=("${err_files[$i]}")
+        [[ $i -lt ${#out_files[@]} ]] && files+=("${out_files[$i]}")
+    done
+
+    # Add any other matching files (not .err or .out) sorted by time
+    while IFS= read -r -d '' file; do
+        files+=("$file")
+    done < <(find logs -name "*$1*" -type f ! -name "*.err" ! -name "*.out" -printf '%T@\t%p\0' 2>/dev/null | sort -zrn | cut -f2-)
+
+    [[ ${#files[@]} -eq 0 ]] && { echo "No matching files found"; return 1; }
+
+    less +F -r "${files[@]}"
+}
+
+lessrfe() {
+    local files=()
+
+    # Find and sort .err files by modification time (newest first)
+    while IFS= read -r -d '' file; do
+        files+=("$file")
+    done < <(find logs -name "*$1*.err" -type f -printf '%T@\t%p\0' 2>/dev/null | sort -zrn | cut -f2-)
+
+    [[ ${#files[@]} -eq 0 ]] && { echo "No matching .err files found"; return 1; }
+
+    less +F -r "${files[@]}"
+}
+
+lessrfo() {
+    local files=()
+
+    # Find and sort .out files by modification time (newest first)
+    while IFS= read -r -d '' file; do
+        files+=("$file")
+    done < <(find logs -name "*$1*.out" -type f -printf '%T@\t%p\0' 2>/dev/null | sort -zrn | cut -f2-)
+
+    [[ ${#files[@]} -eq 0 ]] && { echo "No matching .out files found"; return 1; }
+
+    less +F -r "${files[@]}"
+}
+
+vimp() {
+    local files=""
+    for arg in "$@"; do
+        files="$files logs/*$arg*"
         files="$files *$arg*"
     done
     vim -p $files
