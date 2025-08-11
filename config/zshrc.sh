@@ -193,6 +193,13 @@ lgcm() {
     done
 }
 
+if [[ -n $CURSOR_TRACE_ID ]]; then
+  PROMPT_EOL_MARK=""
+  test -e "./.iterm2_shell_integration.zsh" && source "$./.iterm2_shell_integration.zsh"
+  precmd() { print -Pn "\e]133;D;%?\a" }
+  preexec() { print -Pn "\e]133;C;\a" }
+fi
+
 # Setup tmux if not already configured
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   if [ -f "$HOME/setup_tmux.sh" ]; then

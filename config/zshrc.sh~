@@ -200,4 +200,7 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   fi
 fi
 
+export PATH=/workspace/kitf/.npm-global/bin:$PATH
+
+export HF_HUB_ENABLE_HF_TRANSFER=1
 source ~/.local/bin
