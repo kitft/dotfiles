@@ -28,7 +28,16 @@ alias t='tail'
 # alias rl="readlink -f"
 alias fd='find . -type d -name'
 alias ff='find . -type f -name'
-alias which='type -a'
+# Compatible which function - returns just path for scripts, verbose for interactive
+which() {
+    if [[ -t 1 ]]; then
+        # Interactive terminal - show verbose output
+        type -a "$@"
+    else
+        # Non-interactive (scripts) - return just the path
+        command -v "$@"
+    fi
+}
 
 # storage
 alias du='du -kh' # file space
@@ -199,7 +208,10 @@ qrun() {
 alias uvinstall="uv pip install --update-requirements requirements.txt"
 
 alias getenvs="/workspace/kitf/setup_env.sh"
-alias vim="nvim"
+# Use nvim if available, fallback to vim
+if command -v nvim &> /dev/null; then
+    alias vim="nvim"
+fi
 
 lessrf() {
     less +F -r logs/*"$1"*
