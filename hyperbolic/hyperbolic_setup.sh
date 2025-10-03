@@ -374,4 +374,5 @@ echo ""
 echo "=========================================="
 
 cd /workspace/kitf/dotfiles
+chmod +x hyperbolic/install_env.sh
 ./deploy.sh --vim
