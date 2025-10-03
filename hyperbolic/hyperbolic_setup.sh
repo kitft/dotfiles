@@ -126,9 +126,8 @@ fi
 
 uv python install 3.10
 
-# Install CLI tools globally (need full path to uv with sudo)
-UV_PATH=$(which uv)
-sudo "$UV_PATH" pip install --system simple-gpu-scheduler hf_transfer huggingface_hub[cli]
+# Install CLI tools (these will be available system-wide via uv's python)
+uv pip install --python 3.10 simple-gpu-scheduler hf_transfer huggingface_hub[cli]
 
 # 5) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
