@@ -373,4 +373,5 @@ fi
 echo ""
 echo "=========================================="
 
+cd /workspace/kitf/dotfiles
 ./deploy.sh --vim
