@@ -290,13 +290,6 @@ else
     echo "⚠ HF_TOKEN not set, skipping Hugging Face login"
 fi
 
-if [ -n "$WANDB_API_KEY" ]; then
-    wandb login --relogin $WANDB_API_KEY
-    echo "✓ Logged into Weights & Biases"
-else
-    echo "⚠ WANDB_API_KEY not set, skipping W&B login"
-fi
-
 # 13) Create helpful environment file
 cat > /scratch/.cluster_env << 'EOF'
 # Hyperbolic Cluster Environment Variables
