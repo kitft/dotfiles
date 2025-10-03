@@ -9,3 +9,12 @@ uv pip sync requirements.txt
 uv pip install flash-attn==2.8.2 --no-build-isolation
 pip install --no-deps sgl_kernel==0.2.4
 echo "✓ VeRL environment installed"
+
+# Create symlink from shared code to local venv
+echo "Creating symlink from shared code to local venv..."
+cd /workspace/kitf/nla/verl
+if [ -L ".venv" ] || [ -d ".venv" ]; then
+    rm -rf .venv
+fi
+ln -s /scratch/venvs/nla/.venv .venv
+echo "✓ Symlink created: /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
