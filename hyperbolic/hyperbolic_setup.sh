@@ -269,27 +269,18 @@ mkdir -p $UV_CACHE_DIR
 if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
 
-    # Create venv in scratch directory
-    cd /scratch/venvs/nla
-    rm -rf .venv
-    uv venv --python=3.10.14
+    # Run installation in zsh subshell (same environment as interactive CLI)
+    /usr/bin/zsh -c '
+        cd /scratch/venvs/nla
+        rm -rf .venv
+        uv venv --python=3.10.14
+        source .venv/bin/activate
 
-    # Explicitly set PATH to use venv first
-    export PATH="/scratch/venvs/nla/.venv/bin:$PATH"
-    export VIRTUAL_ENV="/scratch/venvs/nla/.venv"
-
-    # Debug: check what we're using
-    echo "DEBUG: which python: $(which python)"
-    echo "DEBUG: which pip: $(which pip)"
-    echo "DEBUG: which uv: $(which uv)"
-
-    # Install dependencies from shared code location
-    cd /workspace/kitf/nla/verl
-    echo "DEBUG: About to run uv pip sync..."
-    uv pip sync requirements.txt
-    echo "DEBUG: After uv pip sync, which pip: $(which pip)"
-    uv pip install flash-attn==2.8.2 --no-build-isolation
-    pip install --no-deps sgl_kernel==0.2.4
+        cp /workspace/kitf/nla/verl/requirements.txt requirements.txt
+        uv pip sync requirements.txt
+        uv pip install flash-attn==2.8.2 --no-build-isolation
+        pip install --no-deps sgl_kernel==0.2.4
+    '
     echo "✓ VeRL environment installed"
 
     # Create symlink from shared code to local venv
