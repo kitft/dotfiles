@@ -268,12 +268,15 @@ mkdir -p $UV_CACHE_DIR
 # Install from shared code location (if available)
 if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
-    cd /workspace/kitf/nla/verl
 
-    # Use uv for venv creation and dependency installation
+    # Create venv in scratch directory
+    cd /scratch/venvs/nla
     rm -rf .venv
-    uv venv --python=3.10.14
+    uv venv --python=3.10.14 .venv
     source .venv/bin/activate
+
+    # Install dependencies from shared code location
+    cd /workspace/kitf/nla/verl
     uv pip sync requirements.txt
     pip install flash-attn==2.8.2 --no-build-isolation
     pip install --no-deps sgl_kernel==0.2.4
