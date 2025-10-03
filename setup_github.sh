@@ -56,7 +56,11 @@ if command -v gh &> /dev/null; then
         echo "✅ Found existing GitHub CLI auth in persistent storage"
     fi
 
-    if gh auth status > /dev/null 2>&1; then
+    # Debug: show what gh auth status actually says
+    GH_STATUS_OUTPUT=$(gh auth status 2>&1 || true)
+    echo "Debug: gh auth status output: $GH_STATUS_OUTPUT"
+
+    if echo "$GH_STATUS_OUTPUT" | grep -q "Logged in"; then
         echo "✅ Already authenticated with GitHub CLI!"
     else
         # Try to authenticate with token if GITHUB_TOKEN is set
@@ -70,9 +74,11 @@ if command -v gh &> /dev/null; then
             # Try web authentication (works even when stdin is piped)
             echo "🔐 Logging in with GitHub CLI (web browser)..."
             echo "   This will open a browser window for authentication..."
-            if gh auth login --web --git-protocol ssh 2>&1; then
+            if gh auth login --web 2>&1; then
                 if gh auth status > /dev/null 2>&1; then
                     echo "✅ Successfully authenticated with GitHub!"
+                    # Set git protocol to SSH after authentication
+                    gh config set git_protocol ssh 2>/dev/null || true
                 else
                     echo "⚠️  GitHub CLI authentication skipped, will rely on SSH keys"
                 fi
