@@ -277,15 +277,14 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements
     # Set explicit paths to venv executables
     VENV_PATH="/scratch/venvs/nla/.venv"
     VENV_PYTHON="$VENV_PATH/bin/python"
-    VENV_PIP="$VENV_PATH/bin/pip"
 
     # Install dependencies from shared code location
     cd /workspace/kitf/nla/verl
     uv pip sync --python "$VENV_PYTHON" requirements.txt
 
-    # Use explicit venv pip (don't rely on PATH which uv may have broken)
-    "$VENV_PIP" install flash-attn==2.8.2 --no-build-isolation
-    "$VENV_PIP" install --no-deps sgl_kernel==0.2.4
+    # Use uv pip install with explicit python for packages that need compilation
+    uv pip install --python "$VENV_PYTHON" flash-attn==2.8.2 --no-build-isolation
+    uv pip install --python "$VENV_PYTHON" --no-deps sgl_kernel==0.2.4
     echo "✓ VeRL environment installed"
 
     # Create symlink from shared code to local venv
