@@ -272,23 +272,14 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements
     # Create venv in scratch directory
     cd /scratch/venvs/nla
     rm -rf .venv
-    uv venv --python=3.10.14 .venv
-
-    # Set explicit paths to venv executables
-    VENV_PATH="/scratch/venvs/nla/.venv"
-    VENV_PYTHON="$VENV_PATH/bin/python"
-    VENV_PIP="$VENV_PATH/bin/pip"
+    uv venv --python=3.10.14
+    source .venv/bin/activate
 
     # Install dependencies from shared code location
     cd /workspace/kitf/nla/verl
-    uv pip sync --python "$VENV_PYTHON" requirements.txt
-
-    # Install pip into venv using python -m ensurepip
-    "$VENV_PYTHON" -m ensurepip --upgrade
-
-    # Now use the venv's pip for packages that need special compilation
-    "$VENV_PIP" install flash-attn==2.8.2 --no-build-isolation
-    "$VENV_PIP" install --no-deps sgl_kernel==0.2.4
+    uv pip sync requirements.txt
+    uv pip install flash-attn==2.8.2 --no-build-isolation
+    pip install --no-deps sgl_kernel==0.2.4
     echo "✓ VeRL environment installed"
 
     # Create symlink from shared code to local venv
