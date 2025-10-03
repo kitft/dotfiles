@@ -8,6 +8,10 @@ cp /workspace/kitf/nla/verl/requirements.txt requirements.txt
 uv pip sync requirements.txt
 uv pip install flash-attn==2.8.2 --no-build-isolation
 pip install --no-deps sgl_kernel==0.2.4
+
+# Ensure wandb is installed
+uv pip install wandb
+
 echo "✓ VeRL environment installed"
 
 # Create symlink from shared code to local venv
