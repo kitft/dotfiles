@@ -220,7 +220,7 @@ if ! mountpoint -q /workspace; then
     echo "  Skipping code cloning to shared storage."
     echo "  After mounting /workspace, run:"
     echo "    mkdir -p /workspace/kitf && cd /workspace/kitf"
-    echo "    git clone --recurse-submodules https://github.com/kitft/nla"
+    echo "    git clone --recurse-submodules git@github.com:kitft/nla.git"
     echo ""
     echo "  Then create the symlink:"
     echo "    cd /workspace/kitf/nla/verl && ln -s /scratch/venvs/nla/.venv .venv"
@@ -232,7 +232,7 @@ else
         echo "Cloning nla repository to shared storage..."
         mkdir -p /workspace/kitf
         cd /workspace/kitf
-        git clone --recurse-submodules https://github.com/kitft/nla
+        git clone --recurse-submodules git@github.com:kitft/nla.git
     else
         echo "✓ Code already exists on shared storage"
         cd /workspace/kitf/nla
