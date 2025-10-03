@@ -75,16 +75,40 @@ if [ -n "$STORAGE_VIP" ]; then
     echo "Setting up network volume at $STORAGE_VIP..."
     if ! mountpoint -q /data; then
         sudo mkdir -p /data
-        if ! grep -q "$STORAGE_VIP:/data" /etc/fstab; then
-            echo "$STORAGE_VIP:/data /data nfs rw,nconnect=16,nfsvers=3 0 0" | sudo tee -a /etc/fstab
+
+        # Test if NFS server is reachable
+        echo "Testing NFS server connectivity..."
+        if ! showmount -e "$STORAGE_VIP" 2>/dev/null; then
+            echo "⚠ WARNING: Cannot connect to NFS server at $STORAGE_VIP"
+            echo "  This usually means:"
+            echo "    1. The network volume hasn't been created/attached in Hyperbolic UI yet"
+            echo "    2. The VIP address is incorrect"
+            echo "    3. The NFS server is still starting up (wait 30 seconds and retry)"
+            echo ""
+            echo "  Please create/attach the network volume in Hyperbolic UI first, then re-run:"
+            echo "    sudo mount -a"
+            echo ""
+            echo "  Continuing with rest of setup..."
+        else
+            # Add to fstab if not already there
+            if ! grep -q "$STORAGE_VIP:/data" /etc/fstab; then
+                echo "$STORAGE_VIP:/data /data nfs rw,nconnect=16,nfsvers=3 0 0" | sudo tee -a /etc/fstab
+            fi
+
+            # Try to mount
+            if sudo mount -a 2>/dev/null; then
+                echo "✓ Network volume mounted at /data"
+            else
+                echo "⚠ Failed to mount network volume - you may need to mount it manually later"
+                echo "  Try: sudo mount -a"
+            fi
         fi
-        sudo mount -a
-        echo "✓ Network volume mounted at /data"
     else
         echo "✓ /data already mounted"
     fi
 else
     echo "⚠ No storage VIP provided, skipping network volume setup"
+    echo "  Note: You'll need to mount /data manually for shared storage features"
 fi
 
 # 4) Setup Python tools
@@ -168,18 +192,33 @@ fi
 # 11) Setup VeRL environment
 echo "Setting up VeRL environment..."
 
-# Clone code to shared storage (if on head node or if doesn't exist)
-if [ ! -d "/data/code/nla" ]; then
-    echo "Cloning nla repository to shared storage..."
-    sudo mkdir -p /data/code
-    sudo chown -R $USER:$USER /data/code
-    cd /data/code
-    git clone --recurse-submodules https://github.com/kitft/nla
+# Check if /data is mounted
+if ! mountpoint -q /data; then
+    echo "⚠ WARNING: /data is not mounted!"
+    echo "  Skipping code cloning to shared storage."
+    echo "  After mounting /data, run:"
+    echo "    sudo mkdir -p /data/code && sudo chown -R $USER:$USER /data/code"
+    echo "    cd /data/code && git clone --recurse-submodules https://github.com/kitft/nla"
+    echo ""
+    echo "  Then create the symlink:"
+    echo "    cd /data/code/nla/verl && ln -s /workspace/venvs/nla/.venv .venv"
+    echo ""
+    SKIP_CODE_SETUP=true
 else
-    echo "✓ Code already exists on shared storage"
-    cd /data/code/nla
-    git checkout main
-    git pull
+    # Clone code to shared storage (if on head node or if doesn't exist)
+    if [ ! -d "/data/code/nla" ]; then
+        echo "Cloning nla repository to shared storage..."
+        sudo mkdir -p /data/code
+        sudo chown -R $USER:$USER /data/code
+        cd /data/code
+        git clone --recurse-submodules https://github.com/kitft/nla
+    else
+        echo "✓ Code already exists on shared storage"
+        cd /data/code/nla
+        git checkout main
+        git pull
+    fi
+    SKIP_CODE_SETUP=false
 fi
 
 # Create virtual environment on local scratch (each node needs its own compiled extensions)
@@ -196,26 +235,26 @@ mkdir -p $UV_CACHE_DIR
 
 pip install --upgrade pip
 
-# Install from shared code location
-if [ -f "/data/code/nla/verl/requirements.txt" ]; then
+# Install from shared code location (if available)
+if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/data/code/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
     cd /data/code/nla/verl
     pip install -r requirements.txt
     pip install flash-attn==2.8.2 --no-build-isolation
     pip install --no-deps sgl_kernel==0.2.4
     echo "✓ VeRL environment installed"
-else
-    echo "⚠ requirements.txt not found, skipping VeRL installation"
-fi
 
-# Create symlink from shared code to local venv
-echo "Creating symlink from shared code to local venv..."
-cd /data/code/nla/verl
-if [ -L ".venv" ] || [ -d ".venv" ]; then
-    rm -rf .venv
+    # Create symlink from shared code to local venv
+    echo "Creating symlink from shared code to local venv..."
+    if [ -L ".venv" ] || [ -d ".venv" ]; then
+        rm -rf .venv
+    fi
+    ln -s /workspace/venvs/nla/.venv .venv
+    echo "✓ Symlink created: /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
+else
+    echo "⚠ Skipping VeRL installation (no shared storage available)"
+    echo "  Install dependencies manually after mounting /data"
 fi
-ln -s /workspace/venvs/nla/.venv .venv
-echo "✓ Symlink created: /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
 
 # 12) Login to HF and W&B if tokens are available
 if [ -n "$HF_TOKEN" ]; then
