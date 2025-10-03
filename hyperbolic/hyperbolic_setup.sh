@@ -274,6 +274,10 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements
         # Load zshrc if it exists
         [ -f ~/.zshrc ] && source ~/.zshrc
 
+        # Set uv cache and ensure PATH includes uv
+        export UV_CACHE_DIR=/scratch/.uv_cache
+        export PATH="$HOME/.local/bin:$PATH"
+
         cd /scratch/venvs/nla
         rm -rf .venv
         uv venv --python=3.10.14
