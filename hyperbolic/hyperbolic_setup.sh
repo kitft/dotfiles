@@ -64,6 +64,8 @@ if [ -n "$STORAGE_VIP" ]; then
             echo "Mounting shared network volume to /workspace..."
             if sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 "$STORAGE_VIP:/data" /workspace; then
                 echo "✓ Shared network volume mounted at /workspace"
+                # Fix ownership so current user can write
+                sudo chown -R $USER:$USER /workspace
             else
                 echo "⚠ Failed to mount network volume"
                 echo "  Debug: Check dmesg or /var/log/syslog for errors"
@@ -72,6 +74,11 @@ if [ -n "$STORAGE_VIP" ]; then
         fi
     else
         echo "✓ /workspace already mounted"
+        # Ensure current user has write permissions
+        if [ ! -w /workspace ]; then
+            echo "Fixing /workspace permissions..."
+            sudo chown -R $USER:$USER /workspace
+        fi
     fi
 else
     echo "⚠ No storage VIP provided, skipping network volume setup"
