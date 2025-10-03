@@ -56,37 +56,50 @@ if command -v gh &> /dev/null; then
         echo "✅ Found existing GitHub CLI auth in persistent storage"
     fi
 
-    # Debug: show what gh auth status actually says
+    # Check if actually authenticated
     GH_STATUS_OUTPUT=$(gh auth status 2>&1 || true)
-    echo "Debug: gh auth status output: $GH_STATUS_OUTPUT"
 
     if echo "$GH_STATUS_OUTPUT" | grep -q "Logged in"; then
         echo "✅ Already authenticated with GitHub CLI!"
     else
+        # If auth file exists but not valid, remove it
+        if [ -f "$GH_CONFIG_DIR/hosts.yml" ]; then
+            echo "⚠️  Auth file exists but is invalid, removing..."
+            rm -f "$GH_CONFIG_DIR/hosts.yml"
+        fi
+
         # Try to authenticate with token if GITHUB_TOKEN is set
         if [ -n "$GITHUB_TOKEN" ]; then
             echo "🔐 Authenticating with GITHUB_TOKEN..."
             echo "$GITHUB_TOKEN" | gh auth login --with-token
-            if gh auth status > /dev/null 2>&1; then
+            if gh auth status 2>&1 | grep -q "Logged in"; then
                 echo "✅ Successfully authenticated with token!"
             fi
         else
-            # Try web authentication (works even when stdin is piped)
-            echo "🔐 Logging in with GitHub CLI (web browser)..."
-            echo "   This will open a browser window for authentication..."
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📱 GitHub CLI Authentication Required"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "To use 'gh' CLI for accessing private repos, authenticate now:"
+            echo ""
+            echo "  1. Copy the one-time code that will be shown"
+            echo "  2. Open: https://github.com/login/device"
+            echo "  3. Paste the code and authorize"
+            echo ""
+            echo "Press ENTER to continue (or Ctrl+C to skip gh auth)..."
+            read -r
+
             if gh auth login --web 2>&1; then
-                if gh auth status > /dev/null 2>&1; then
+                if gh auth status 2>&1 | grep -q "Logged in"; then
                     echo "✅ Successfully authenticated with GitHub!"
-                    # Set git protocol to SSH after authentication
-                    gh config set git_protocol ssh 2>/dev/null || true
                 else
-                    echo "⚠️  GitHub CLI authentication skipped, will rely on SSH keys"
+                    echo "⚠️  Authentication may have failed, continuing..."
                 fi
-            else
-                echo "⚠️  GitHub CLI authentication not available"
-                echo "   SSH keys will be used for git operations"
-                echo "   To authenticate gh CLI later, run: gh auth login --web"
             fi
+
+            echo ""
+            echo "Note: SSH keys will work for git operations even without gh CLI auth"
         fi
     fi
 
