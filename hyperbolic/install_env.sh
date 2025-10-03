@@ -12,6 +12,16 @@ pip install --no-deps sgl_kernel==0.2.4
 # Ensure wandb is installed
 uv pip install wandb
 
+# Login to W&B if token is available and wandb command exists
+if command -v wandb &> /dev/null && [ -n "$WANDB_API_KEY" ]; then
+    wandb login --relogin $WANDB_API_KEY
+    echo "✓ Logged into Weights & Biases"
+elif [ -n "$WANDB_API_KEY" ]; then
+    echo "⚠ wandb command not found, skipping W&B login"
+else
+    echo "⚠ WANDB_API_KEY not set, skipping W&B login"
+fi
+
 echo "✓ VeRL environment installed"
 
 # Create symlink from shared code to local venv
