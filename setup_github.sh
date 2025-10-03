@@ -66,19 +66,21 @@ if command -v gh &> /dev/null; then
             if gh auth status > /dev/null 2>&1; then
                 echo "✅ Successfully authenticated with token!"
             fi
-        elif [ -t 0 ]; then
-            # Running interactively, can prompt user
-            echo "🔐 Logging in with GitHub CLI (web browser)..."
-            gh auth login --web --git-protocol ssh
-            if gh auth status > /dev/null 2>&1; then
-                echo "✅ Successfully authenticated with GitHub!"
-            else
-                echo "⚠️  GitHub CLI authentication failed, will rely on SSH keys"
-            fi
         else
-            echo "⚠️  GitHub CLI not authenticated (non-interactive mode)"
-            echo "   SSH keys will be used for git operations"
-            echo "   To authenticate gh CLI later, run: gh auth login --web"
+            # Try web authentication (works even when stdin is piped)
+            echo "🔐 Logging in with GitHub CLI (web browser)..."
+            echo "   This will open a browser window for authentication..."
+            if gh auth login --web --git-protocol ssh 2>&1; then
+                if gh auth status > /dev/null 2>&1; then
+                    echo "✅ Successfully authenticated with GitHub!"
+                else
+                    echo "⚠️  GitHub CLI authentication skipped, will rely on SSH keys"
+                fi
+            else
+                echo "⚠️  GitHub CLI authentication not available"
+                echo "   SSH keys will be used for git operations"
+                echo "   To authenticate gh CLI later, run: gh auth login --web"
+            fi
         fi
     fi
 
