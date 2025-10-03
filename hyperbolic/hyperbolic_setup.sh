@@ -126,8 +126,10 @@ fi
 
 uv python install 3.10
 
-# Install system packages with uv (run as user, not sudo)
-uv pip install --system simple-gpu-scheduler hf_transfer huggingface_hub[cli]
+# Install system packages with uv using sudo
+# Note: Need to use sudo here since --system writes to /usr/local
+# but we need to preserve the uv PATH
+sudo -E env "PATH=$PATH" uv pip install --system simple-gpu-scheduler hf_transfer huggingface_hub[cli]
 
 # 5) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
