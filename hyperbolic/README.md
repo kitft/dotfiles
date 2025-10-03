@@ -4,6 +4,8 @@ Quick setup scripts for Hyperbolic VeRL training clusters.
 
 ## Quick Start
 
+**IMPORTANT:** Run as your normal user (NOT with sudo). The script will use `sudo` internally where needed.
+
 ### Head Node
 
 ```bash
@@ -17,6 +19,12 @@ curl -s https://raw.githubusercontent.com/kitft/dotfiles/main/hyperbolic/quick_i
 ```
 
 Replace `<storage-vip>` with your Hyperbolic network volume's virtual IP address.
+
+If you need to install sudo first (on minimal images):
+```bash
+apt update && apt install -y sudo
+# Then add your user to sudoers or run the script
+```
 
 ## What Gets Installed
 
@@ -65,28 +73,38 @@ After setup completes:
 
 ## Storage Strategy
 
+### Shared NFS (`/data`) - Accessible to All Nodes
+- **Code repository** (`/data/code/nla`) - Clone once, all nodes see same code
+- **Datasets** (`/data/datasets/`) - Training data accessible to all nodes
+- **Model checkpoints** (`/data/checkpoints/`) - Saved/loaded by all nodes
+- **Symlink** (`/data/code/nla/verl/.venv` → `/workspace/venvs/nla/.venv`) - Points to local venv
+
 ### Local Scratch (`/workspace`) - Node-Specific
-- **Code repositories** (`/workspace/kitf/nla`)
-- **Python venvs** (`.venv` with compiled CUDA kernels)
+- **Python venvs** (`/workspace/venvs/nla/.venv`) - Compiled CUDA kernels per node
 - **UV cache** (`/workspace/.uv_cache`)
 - **Dotfiles** (`/workspace/kitf/dotfiles`)
-- **Secrets** (`.env` files)
+- **HF cache** (`/workspace/.cache/huggingface`)
 
-**Why local?** Each node needs its own compiled extensions (flash-attn, CUDA kernels) that are hardware-specific. Sharing these would cause conflicts.
+### How It Works
 
-### Network Volume (`/data`) - Shared
-- **Datasets** (training data accessible to all nodes)
-- **Model checkpoints** (saved/loaded by all nodes)
-- **Shared configs** (if needed)
+The clever part: code lives on shared storage, but each node has its own venv with compiled extensions on local scratch. A symlink in the shared code directory points to each node's local venv:
 
-**Why shared?** All nodes need to access the same training data and save/load checkpoints to a common location.
+```
+/data/code/nla/verl/.venv  →  /workspace/venvs/nla/.venv
+```
+
+Since the symlink path is identical on all nodes, each node follows it to its own local venv. This means:
+- ✓ Clone code once, use everywhere
+- ✓ Edit code once, all nodes see changes
+- ✓ Each node has its own compiled extensions (no conflicts)
+- ✓ Standard workflow: `cd /data/code/nla/verl && source .venv/bin/activate`
 
 ## Architecture
 
 - **Head node**: Coordinates Ray cluster, runs training script
 - **Worker nodes**: Execute rollouts and optimization
-- **Local scratch** (`/workspace`): LVM-backed NVMe, fast local storage for code/venvs
-- **Network volume** (`/data`): NFS-mounted shared storage for datasets/checkpoints
+- **Local scratch** (`/workspace`): LVM-backed NVMe, fast local storage for venvs/caches
+- **Network volume** (`/data`): NFS-mounted shared storage for code/datasets/checkpoints
 
 ## Security
 
