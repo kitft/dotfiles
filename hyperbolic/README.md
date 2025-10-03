@@ -73,38 +73,39 @@ After setup completes:
 
 ## Storage Strategy
 
-### Shared NFS (`/data`) - Accessible to All Nodes
-- **Code repository** (`/data/code/nla`) - Clone once, all nodes see same code
-- **Datasets** (`/data/datasets/`) - Training data accessible to all nodes
-- **Model checkpoints** (`/data/checkpoints/`) - Saved/loaded by all nodes
-- **Symlink** (`/data/code/nla/verl/.venv` → `/workspace/venvs/nla/.venv`) - Points to local venv
-
-### Local Scratch (`/workspace`) - Node-Specific
-- **Python venvs** (`/workspace/venvs/nla/.venv`) - Compiled CUDA kernels per node
-- **UV cache** (`/workspace/.uv_cache`)
+### Shared NFS (`/workspace`) - Accessible to All Nodes
+- **Code repository** (`/workspace/kitf/nla`) - Clone once, all nodes see same code
+- **Datasets** (`/workspace/datasets/`) - Training data accessible to all nodes
+- **Model checkpoints** (`/workspace/checkpoints/`) - Saved/loaded by all nodes
 - **Dotfiles** (`/workspace/kitf/dotfiles`)
-- **HF cache** (`/workspace/.cache/huggingface`)
+- **Symlink** (`/workspace/kitf/nla/verl/.venv` → `/scratch/venvs/nla/.venv`) - Points to local venv
+
+### Local Scratch (`/scratch`) - Node-Specific
+- **Python venvs** (`/scratch/venvs/nla/.venv`) - Compiled CUDA kernels per node
+- **UV cache** (`/scratch/.uv_cache`)
+- **HF cache** (`/scratch/.cache/huggingface`)
+- **Temporary files** (compiled kernels, build artifacts)
 
 ### How It Works
 
 The clever part: code lives on shared storage, but each node has its own venv with compiled extensions on local scratch. A symlink in the shared code directory points to each node's local venv:
 
 ```
-/data/code/nla/verl/.venv  →  /workspace/venvs/nla/.venv
+/workspace/kitf/nla/verl/.venv  →  /scratch/venvs/nla/.venv
 ```
 
 Since the symlink path is identical on all nodes, each node follows it to its own local venv. This means:
 - ✓ Clone code once, use everywhere
-- ✓ Edit code once, all nodes see changes
+- ✓ Edit code once, all nodes see changes instantly
 - ✓ Each node has its own compiled extensions (no conflicts)
-- ✓ Standard workflow: `cd /data/code/nla/verl && source .venv/bin/activate`
+- ✓ Standard workflow: `cd /workspace/kitf/nla/verl && source .venv/bin/activate`
 
 ## Architecture
 
 - **Head node**: Coordinates Ray cluster, runs training script
 - **Worker nodes**: Execute rollouts and optimization
-- **Local scratch** (`/workspace`): LVM-backed NVMe, fast local storage for venvs/caches
-- **Network volume** (`/data`): NFS-mounted shared storage for code/datasets/checkpoints
+- **Shared workspace** (`/workspace`): NFS-mounted network volume for code/datasets/checkpoints
+- **Local scratch** (`/scratch`): LVM-backed NVMe for venvs/caches/temporary files
 
 ## Security
 
