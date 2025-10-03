@@ -126,8 +126,12 @@ fi
 
 uv python install 3.10
 
-# Install CLI tools (these will be available system-wide via uv's python)
-uv pip install --python 3.10 simple-gpu-scheduler hf_transfer huggingface_hub[cli]
+# Install CLI tools to user space (avoids permission issues)
+pip3 install --user huggingface_hub[cli] hf_transfer simple-gpu-scheduler
+
+# Ensure user pip bin is in PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"
 
 # 5) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
