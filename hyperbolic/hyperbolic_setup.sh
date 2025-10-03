@@ -160,6 +160,10 @@ fi
 
 # 6) Setup GitHub automatically
 echo "Setting up GitHub..."
+
+# Export GH_CONFIG_DIR so gh CLI uses shared storage
+export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
+
 if [ -f "./setup_github.sh" ]; then
     chmod +x ./setup_github.sh
     ./setup_github.sh
