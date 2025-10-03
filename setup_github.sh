@@ -50,22 +50,40 @@ git config --global user.name "$name"
 echo "Setting up GitHub CLI authentication..."
 if command -v gh &> /dev/null; then
     mkdir -p "$GH_CONFIG_DIR"
-    
+
+    # Check if auth exists in persistent storage
+    if [ -f "$GH_CONFIG_DIR/hosts.yml" ]; then
+        echo "✅ Found existing GitHub CLI auth in persistent storage"
+    fi
+
     if gh auth status > /dev/null 2>&1; then
         echo "✅ Already authenticated with GitHub CLI!"
     else
-        echo "🔐 Logging in with GitHub CLI..."
-        gh auth login
-        
-        if gh auth status > /dev/null 2>&1; then
-            echo "✅ Successfully authenticated with GitHub!"
+        # Try to authenticate with token if GITHUB_TOKEN is set
+        if [ -n "$GITHUB_TOKEN" ]; then
+            echo "🔐 Authenticating with GITHUB_TOKEN..."
+            echo "$GITHUB_TOKEN" | gh auth login --with-token
+            if gh auth status > /dev/null 2>&1; then
+                echo "✅ Successfully authenticated with token!"
+            fi
+        elif [ -t 0 ]; then
+            # Running interactively, can prompt user
+            echo "🔐 Logging in with GitHub CLI (web browser)..."
+            gh auth login --web --git-protocol ssh
+            if gh auth status > /dev/null 2>&1; then
+                echo "✅ Successfully authenticated with GitHub!"
+            else
+                echo "⚠️  GitHub CLI authentication failed, will rely on SSH keys"
+            fi
         else
-            echo "❌ GitHub authentication failed."
+            echo "⚠️  GitHub CLI not authenticated (non-interactive mode)"
+            echo "   SSH keys will be used for git operations"
+            echo "   To authenticate gh CLI later, run: gh auth login --web"
         fi
     fi
-    
+
     # Configure GitHub CLI to use SSH
-    gh config set git_protocol ssh
+    gh config set git_protocol ssh 2>/dev/null || true
 else
     echo "❌ GitHub CLI not found. Please install it first."
 fi
