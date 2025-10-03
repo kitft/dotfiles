@@ -74,11 +74,12 @@ if [ -n "$STORAGE_VIP" ]; then
         fi
     else
         echo "✓ /workspace already mounted"
-        # Ensure current user has write permissions
-        if [ ! -w /workspace ]; then
-            echo "Fixing /workspace permissions..."
-            sudo chown -R $USER:$USER /workspace
-        fi
+    fi
+
+    # Always ensure current user has write permissions to /workspace
+    if [ ! -w /workspace ]; then
+        echo "Fixing /workspace permissions..."
+        sudo chown -R $USER:$USER /workspace
     fi
 else
     echo "⚠ No storage VIP provided, skipping network volume setup"
