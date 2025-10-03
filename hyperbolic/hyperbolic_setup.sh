@@ -196,6 +196,10 @@ fi
 # 10) Setup secrets and environment variables
 echo "Setting up secrets..."
 cd /workspace/kitf/dotfiles
+
+# Export GH_CONFIG_DIR so gh CLI works in this session
+export GH_CONFIG_DIR="/workspace/kitf/.config/gh"
+
 if [ -f "./setup_env.sh" ]; then
     chmod +x ./setup_env.sh
     ./setup_env.sh
