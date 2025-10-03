@@ -35,9 +35,52 @@ sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get install -y \
     lvm2 \
     nfs-common
 
-# 2) Setup local scratch volume (LVM-backed NVMe)
+# 2) Setup shared network volume (if VIP provided) - mount to /workspace
+if [ -n "$STORAGE_VIP" ]; then
+    echo "Setting up shared network volume at $STORAGE_VIP..."
+    if ! mountpoint -q /workspace; then
+        sudo mkdir -p /workspace
+
+        # Test if NFS server is reachable
+        echo "Testing NFS server connectivity..."
+        if ! showmount -e "$STORAGE_VIP" 2>/dev/null; then
+            echo "⚠ WARNING: Cannot connect to NFS server at $STORAGE_VIP"
+            echo "  This usually means:"
+            echo "    1. The network volume hasn't been created/attached in Hyperbolic UI yet"
+            echo "    2. The VIP address is incorrect"
+            echo "    3. The NFS server is still starting up (wait 30 seconds and retry)"
+            echo ""
+            echo "  Please create/attach the network volume in Hyperbolic UI first, then re-run:"
+            echo "    sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 $STORAGE_VIP:/data /workspace"
+            echo ""
+            echo "  Continuing with rest of setup..."
+        else
+            # Add to fstab if not already there
+            if ! grep -q "$STORAGE_VIP" /etc/fstab; then
+                echo "$STORAGE_VIP:/data /workspace nfs rw,nconnect=16,nfsvers=3 0 0" | sudo tee -a /etc/fstab
+            fi
+
+            # Try to mount
+            echo "Mounting shared network volume to /workspace..."
+            if sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 "$STORAGE_VIP:/data" /workspace; then
+                echo "✓ Shared network volume mounted at /workspace"
+            else
+                echo "⚠ Failed to mount network volume"
+                echo "  Debug: Check dmesg or /var/log/syslog for errors"
+                echo "  Try manually: sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 $STORAGE_VIP:/data /workspace"
+            fi
+        fi
+    else
+        echo "✓ /workspace already mounted"
+    fi
+else
+    echo "⚠ No storage VIP provided, skipping network volume setup"
+    echo "  Note: You'll need to mount /workspace manually for shared storage features"
+fi
+
+# 3) Setup local scratch volume (LVM-backed NVMe) - mount to /scratch
 echo "Setting up local scratch volume..."
-if ! mountpoint -q /workspace; then
+if ! mountpoint -q /scratch; then
     # Detect NVMe devices (skip nvme0n1 and nvme1n1, use nvme2n1+)
     NVME_DEVICES=$(lsblk -d -o name,type | grep nvme | awk '{print "/dev/"$1}' | grep -E 'nvme[2-9]n1')
 
@@ -56,68 +99,35 @@ if ! mountpoint -q /workspace; then
         fi
 
         # Mount the volume
-        sudo mkdir -p /workspace
+        sudo mkdir -p /scratch
         if ! grep -q "/dev/mapper/vg0-lv_scratch" /etc/fstab; then
-            echo '/dev/mapper/vg0-lv_scratch /workspace ext4 defaults 0 0' | sudo tee -a /etc/fstab
+            echo '/dev/mapper/vg0-lv_scratch /scratch ext4 defaults 0 0' | sudo tee -a /etc/fstab
         fi
         sudo mount -a
-        echo "✓ Local scratch volume mounted at /workspace"
+        echo "✓ Local scratch volume mounted at /scratch"
     else
-        echo "⚠ No additional NVMe devices found, using /workspace without LVM"
-        sudo mkdir -p /workspace
+        echo "⚠ No additional NVMe devices found, creating /scratch without LVM"
+        sudo mkdir -p /scratch
     fi
 else
-    echo "✓ /workspace already mounted"
-fi
-
-# 3) Setup shared network volume (if VIP provided)
-if [ -n "$STORAGE_VIP" ]; then
-    echo "Setting up network volume at $STORAGE_VIP..."
-    if ! mountpoint -q /data; then
-        sudo mkdir -p /data
-
-        # Test if NFS server is reachable
-        echo "Testing NFS server connectivity..."
-        if ! showmount -e "$STORAGE_VIP" 2>/dev/null; then
-            echo "⚠ WARNING: Cannot connect to NFS server at $STORAGE_VIP"
-            echo "  This usually means:"
-            echo "    1. The network volume hasn't been created/attached in Hyperbolic UI yet"
-            echo "    2. The VIP address is incorrect"
-            echo "    3. The NFS server is still starting up (wait 30 seconds and retry)"
-            echo ""
-            echo "  Please create/attach the network volume in Hyperbolic UI first, then re-run:"
-            echo "    sudo mount -a"
-            echo ""
-            echo "  Continuing with rest of setup..."
-        else
-            # Add to fstab if not already there
-            if ! grep -q "$STORAGE_VIP:/data" /etc/fstab; then
-                echo "$STORAGE_VIP:/data /data nfs rw,nconnect=16,nfsvers=3 0 0" | sudo tee -a /etc/fstab
-            fi
-
-            # Try to mount
-            if sudo mount -a 2>/dev/null; then
-                echo "✓ Network volume mounted at /data"
-            else
-                echo "⚠ Failed to mount network volume - you may need to mount it manually later"
-                echo "  Try: sudo mount -a"
-            fi
-        fi
-    else
-        echo "✓ /data already mounted"
-    fi
-else
-    echo "⚠ No storage VIP provided, skipping network volume setup"
-    echo "  Note: You'll need to mount /data manually for shared storage features"
+    echo "✓ /scratch already mounted"
 fi
 
 # 4) Setup Python tools
 echo "Setting up Python tools..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
+
+# Verify uv is in PATH
+if ! command -v uv &> /dev/null; then
+    echo "⚠ uv not found in PATH after install, adding manually"
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 uv python install 3.10
-sudo uv pip install --system simple-gpu-scheduler
-sudo uv pip install --system -U hf_transfer huggingface_hub[cli]
+
+# Install system packages with uv (run as user, not sudo)
+uv pip install --system simple-gpu-scheduler hf_transfer huggingface_hub[cli]
 
 # 5) Setup dotfiles and ZSH
 echo "Setting up dotfiles and ZSH..."
@@ -192,29 +202,28 @@ fi
 # 11) Setup VeRL environment
 echo "Setting up VeRL environment..."
 
-# Check if /data is mounted
-if ! mountpoint -q /data; then
-    echo "⚠ WARNING: /data is not mounted!"
+# Check if /workspace is mounted
+if ! mountpoint -q /workspace; then
+    echo "⚠ WARNING: /workspace is not mounted!"
     echo "  Skipping code cloning to shared storage."
-    echo "  After mounting /data, run:"
-    echo "    sudo mkdir -p /data/code && sudo chown -R $USER:$USER /data/code"
-    echo "    cd /data/code && git clone --recurse-submodules https://github.com/kitft/nla"
+    echo "  After mounting /workspace, run:"
+    echo "    mkdir -p /workspace/kitf && cd /workspace/kitf"
+    echo "    git clone --recurse-submodules https://github.com/kitft/nla"
     echo ""
     echo "  Then create the symlink:"
-    echo "    cd /data/code/nla/verl && ln -s /workspace/venvs/nla/.venv .venv"
+    echo "    cd /workspace/kitf/nla/verl && ln -s /scratch/venvs/nla/.venv .venv"
     echo ""
     SKIP_CODE_SETUP=true
 else
     # Clone code to shared storage (if on head node or if doesn't exist)
-    if [ ! -d "/data/code/nla" ]; then
+    if [ ! -d "/workspace/kitf/nla" ]; then
         echo "Cloning nla repository to shared storage..."
-        sudo mkdir -p /data/code
-        sudo chown -R $USER:$USER /data/code
-        cd /data/code
+        mkdir -p /workspace/kitf
+        cd /workspace/kitf
         git clone --recurse-submodules https://github.com/kitft/nla
     else
         echo "✓ Code already exists on shared storage"
-        cd /data/code/nla
+        cd /workspace/kitf/nla
         git checkout main
         git pull
     fi
@@ -223,22 +232,22 @@ fi
 
 # Create virtual environment on local scratch (each node needs its own compiled extensions)
 echo "Creating Python virtual environment on local scratch..."
-mkdir -p /workspace/venvs/nla
-cd /workspace/venvs/nla
+mkdir -p /scratch/venvs/nla
+cd /scratch/venvs/nla
 rm -rf .venv
 python3.10 -m venv .venv
 source .venv/bin/activate
 
 # Configure UV to use local cache
-export UV_CACHE_DIR=/workspace/.uv_cache
+export UV_CACHE_DIR=/scratch/.uv_cache
 mkdir -p $UV_CACHE_DIR
 
 pip install --upgrade pip
 
 # Install from shared code location (if available)
-if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/data/code/nla/verl/requirements.txt" ]; then
+if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
-    cd /data/code/nla/verl
+    cd /workspace/kitf/nla/verl
     pip install -r requirements.txt
     pip install flash-attn==2.8.2 --no-build-isolation
     pip install --no-deps sgl_kernel==0.2.4
@@ -249,11 +258,11 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/data/code/nla/verl/requirements.txt"
     if [ -L ".venv" ] || [ -d ".venv" ]; then
         rm -rf .venv
     fi
-    ln -s /workspace/venvs/nla/.venv .venv
-    echo "✓ Symlink created: /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
+    ln -s /scratch/venvs/nla/.venv .venv
+    echo "✓ Symlink created: /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
 else
     echo "⚠ Skipping VeRL installation (no shared storage available)"
-    echo "  Install dependencies manually after mounting /data"
+    echo "  Install dependencies manually after mounting /workspace"
 fi
 
 # 12) Login to HF and W&B if tokens are available
@@ -273,30 +282,30 @@ else
 fi
 
 # 13) Create helpful environment file
-cat > /workspace/.cluster_env << 'EOF'
+cat > /scratch/.cluster_env << 'EOF'
 # Hyperbolic Cluster Environment Variables
-# Source this file in your training scripts or shell: source /workspace/.cluster_env
+# Source this file in your training scripts or shell: source /scratch/.cluster_env
 
 # Storage paths
-export DATA_DIR=/data                              # Shared NFS storage for datasets and checkpoints
-export CODE_DIR=/data/code/nla                     # Shared code repository
-export VERL_DIR=/data/code/nla/verl               # VeRL directory (shared code)
-export VENV_DIR=/workspace/venvs/nla/.venv        # Local venv (per-node compiled extensions)
+export WORKSPACE_DIR=/workspace                       # Shared NFS storage (code, datasets, checkpoints)
+export CODE_DIR=/workspace/kitf/nla                   # Shared code repository
+export VERL_DIR=/workspace/kitf/nla/verl             # VeRL directory (shared code)
+export SCRATCH_DIR=/scratch                           # Local scratch (venvs, caches)
+export VENV_DIR=/scratch/venvs/nla/.venv             # Local venv (per-node compiled extensions)
 
 # Python environment (symlink in shared code points to local venv)
-export VENV_PATH=/data/code/nla/verl/.venv        # Use this - it's a symlink to local venv
+export VENV_PATH=/workspace/kitf/nla/verl/.venv      # Use this - it's a symlink to local venv
 
 # Hugging Face
 export HF_HUB_ENABLE_HF_TRANSFER=1
-export HF_HOME=/workspace/.cache/huggingface       # Local cache on fast NVMe
+export HF_HOME=/scratch/.cache/huggingface           # Local cache on fast NVMe
 
 # Example usage in your training script:
-# DATA_PATH = os.environ.get('DATA_DIR', '/data')
-# CHECKPOINT_PATH = f"{DATA_PATH}/checkpoints/my_model"
-# DATASET_PATH = f"{DATA_PATH}/datasets/my_dataset"
+# CHECKPOINT_PATH = "/workspace/checkpoints/my_model"
+# DATASET_PATH = "/workspace/datasets/my_dataset"
 EOF
 
-echo "✓ Created cluster environment file at /workspace/.cluster_env"
+echo "✓ Created cluster environment file at /scratch/.cluster_env"
 
 # 14) Node-specific setup
 if [ "$NODE_TYPE" == "head" ]; then
@@ -306,10 +315,11 @@ if [ "$NODE_TYPE" == "head" ]; then
     echo "=========================================="
     echo ""
     echo "STORAGE PATHS:"
-    echo "  • Shared code:             /data/code/nla (all nodes see same code)"
-    echo "  • Shared data/checkpoints: /data/datasets, /data/checkpoints"
-    echo "  • Local venvs:             /workspace/venvs/nla/.venv (per-node)"
-    echo "  • Symlink:                 /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
+    echo "  • Shared workspace:        /workspace (NFS - code, datasets, checkpoints)"
+    echo "  • Shared code:             /workspace/kitf/nla (all nodes see same code)"
+    echo "  • Local scratch:           /scratch (NVMe - venvs, caches)"
+    echo "  • Local venvs:             /scratch/venvs/nla/.venv (per-node)"
+    echo "  • Symlink:                 /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
     echo ""
     echo "NEXT STEPS:"
     echo "  1. Start Ray head:"
@@ -318,16 +328,16 @@ if [ "$NODE_TYPE" == "head" ]; then
     echo "  2. Note the Ray address shown (share with worker nodes)"
     echo ""
     echo "  3. In your training script, use these paths:"
-    echo "     • Datasets:     /data/datasets/"
-    echo "     • Checkpoints:  /data/checkpoints/"
+    echo "     • Datasets:     /workspace/datasets/"
+    echo "     • Checkpoints:  /workspace/checkpoints/"
     echo ""
     echo "  4. Run training:"
-    echo "     cd /data/code/nla/verl"
+    echo "     cd /workspace/kitf/nla/verl"
     echo "     source .venv/bin/activate    # follows symlink to local venv"
     echo "     python your_training_script.py"
     echo ""
     echo "TIP: Source cluster env for convenience:"
-    echo "     source /workspace/.cluster_env"
+    echo "     source /scratch/.cluster_env"
 else
     echo ""
     echo "=========================================="
@@ -335,10 +345,11 @@ else
     echo "=========================================="
     echo ""
     echo "STORAGE PATHS:"
-    echo "  • Shared code:             /data/code/nla (all nodes see same code)"
-    echo "  • Shared data/checkpoints: /data/datasets, /data/checkpoints"
-    echo "  • Local venvs:             /workspace/venvs/nla/.venv (per-node)"
-    echo "  • Symlink:                 /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
+    echo "  • Shared workspace:        /workspace (NFS - code, datasets, checkpoints)"
+    echo "  • Shared code:             /workspace/kitf/nla (all nodes see same code)"
+    echo "  • Local scratch:           /scratch (NVMe - venvs, caches)"
+    echo "  • Local venvs:             /scratch/venvs/nla/.venv (per-node)"
+    echo "  • Symlink:                 /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
     echo ""
     echo "NEXT STEPS:"
     echo "  1. Get Ray head address from head node"
@@ -347,7 +358,7 @@ else
     echo "     ray start --address=<head-ip>:6379"
     echo ""
     echo "TIP: Source cluster env for convenience:"
-    echo "     source /workspace/.cluster_env"
+    echo "     source /scratch/.cluster_env"
 fi
 
 echo ""
