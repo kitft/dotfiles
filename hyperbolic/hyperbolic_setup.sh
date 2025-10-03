@@ -265,29 +265,21 @@ cd /scratch/venvs/nla
 export UV_CACHE_DIR=/scratch/.uv_cache
 mkdir -p $UV_CACHE_DIR
 
-# Install from shared code location (if available)
-if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements.txt" ]; then
-    echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
-
-    # Run installation commands one by one in same zsh session
-    export UV_CACHE_DIR=/scratch/.uv_cache
-    export PATH="$HOME/.local/bin:$PATH"
-    chmod +x /workspace/kitf/dotfiles/hyperbolic/install_env.sh
-    zsh /workspace/kitf/dotfiles/hyperbolic/install_env.sh
-
-    echo "✓ VeRL environment installed"
-
-    # Create symlink from shared code to local venv
-    echo "Creating symlink from shared code to local venv..."
-    if [ -L ".venv" ] || [ -d ".venv" ]; then
-        rm -rf .venv
-    fi
-    ln -s /scratch/venvs/nla/.venv .venv
-    echo "✓ Symlink created: /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
-else
-    echo "⚠ Skipping VeRL installation (no shared storage available)"
-    echo "  Install dependencies manually after mounting /workspace"
-fi
+# Note: VeRL environment installation must be done manually
+echo ""
+echo "=========================================="
+echo "⚠️  MANUAL STEP REQUIRED"
+echo "=========================================="
+echo ""
+echo "To complete VeRL installation, run:"
+echo "  cd /workspace/kitf/nla/verl"
+echo "  /workspace/kitf/dotfiles/hyperbolic/install_env.sh"
+echo ""
+echo "This will:"
+echo "  - Create venv in /scratch/venvs/nla/.venv"
+echo "  - Install all dependencies including flash-attn"
+echo "  - Create symlink from code to venv"
+echo ""
 
 # 12) Login to HF and W&B if tokens are available
 if [ -n "$HF_TOKEN" ]; then
