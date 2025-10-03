@@ -278,9 +278,16 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements
     export PATH="/scratch/venvs/nla/.venv/bin:$PATH"
     export VIRTUAL_ENV="/scratch/venvs/nla/.venv"
 
+    # Debug: check what we're using
+    echo "DEBUG: which python: $(which python)"
+    echo "DEBUG: which pip: $(which pip)"
+    echo "DEBUG: which uv: $(which uv)"
+
     # Install dependencies from shared code location
     cd /workspace/kitf/nla/verl
+    echo "DEBUG: About to run uv pip sync..."
     uv pip sync requirements.txt
+    echo "DEBUG: After uv pip sync, which pip: $(which pip)"
     uv pip install flash-attn==2.8.2 --no-build-isolation
     pip install --no-deps sgl_kernel==0.2.4
     echo "✓ VeRL environment installed"
