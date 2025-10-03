@@ -121,6 +121,12 @@ else
     echo "✓ /scratch already mounted"
 fi
 
+# Always ensure current user has write permissions to /scratch
+if [ ! -w /scratch ]; then
+    echo "Fixing /scratch permissions..."
+    sudo chown -R $USER:$USER /scratch
+fi
+
 # 4) Setup Python tools
 echo "Setting up Python tools..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
