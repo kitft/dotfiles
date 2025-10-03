@@ -269,8 +269,11 @@ mkdir -p $UV_CACHE_DIR
 if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
 
-    # Run installation in interactive zsh to load full environment
-    /usr/bin/zsh -i -c '
+    # Run installation in zsh with manually loaded zshrc
+    /usr/bin/zsh -c '
+        # Load zshrc if it exists
+        [ -f ~/.zshrc ] && source ~/.zshrc
+
         cd /scratch/venvs/nla
         rm -rf .venv
         uv venv --python=3.10.14
