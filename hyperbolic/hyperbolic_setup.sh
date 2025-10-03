@@ -138,7 +138,7 @@ if ! command -v uv &> /dev/null; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-uv python install 3.10
+uv python install 3.10.14
 
 # Install CLI tools to user space (avoids permission issues)
 pip3 install --user huggingface_hub[cli] hf_transfer simple-gpu-scheduler
