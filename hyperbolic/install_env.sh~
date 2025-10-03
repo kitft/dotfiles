@@ -28,7 +28,7 @@ echo "✓ VeRL environment installed"
 
 # Create symlink from shared code to local venv
 echo "Creating symlink from shared code to local venv..."
-cd /workspace/kitf/nla/verl
+cd /workspace/kitf/nla
 if [ -L ".venv" ] || [ -d ".venv" ]; then
     rm -rf .venv
 fi
