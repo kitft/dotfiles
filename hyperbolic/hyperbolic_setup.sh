@@ -12,10 +12,14 @@ echo "=========================================="
 echo "Hyperbolic Node Setup - ${NODE_TYPE} node"
 echo "=========================================="
 
+# Check if sudo is available
+if ! command -v sudo &> /dev/null; then
+    echo "Installing sudo..."
+    apt update && apt-get install -y sudo
+fi
+
 # 1) Setup Linux dependencies
 echo "Installing Linux dependencies..."
-apt update
-apt-get install -y sudo lvm2 nfs-common tmux vim
 sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get install -y \
     sudo \
     less \
@@ -163,18 +167,25 @@ fi
 
 # 11) Setup VeRL environment
 echo "Setting up VeRL environment..."
-cd /workspace/kitf
-if [ ! -d "nla" ]; then
-    echo "Cloning nla repository..."
+
+# Clone code to shared storage (if on head node or if doesn't exist)
+if [ ! -d "/data/code/nla" ]; then
+    echo "Cloning nla repository to shared storage..."
+    sudo mkdir -p /data/code
+    sudo chown -R $USER:$USER /data/code
+    cd /data/code
     git clone --recurse-submodules https://github.com/kitft/nla
+else
+    echo "✓ Code already exists on shared storage"
+    cd /data/code/nla
+    git checkout main
+    git pull
 fi
 
-cd nla/verl
-git checkout main
-git pull
-
 # Create virtual environment on local scratch (each node needs its own compiled extensions)
-echo "Creating Python virtual environment..."
+echo "Creating Python virtual environment on local scratch..."
+mkdir -p /workspace/venvs/nla
+cd /workspace/venvs/nla
 rm -rf .venv
 python3.10 -m venv .venv
 source .venv/bin/activate
@@ -185,8 +196,10 @@ mkdir -p $UV_CACHE_DIR
 
 pip install --upgrade pip
 
-if [ -f "requirements.txt" ]; then
+# Install from shared code location
+if [ -f "/data/code/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
+    cd /data/code/nla/verl
     pip install -r requirements.txt
     pip install flash-attn==2.8.2 --no-build-isolation
     pip install --no-deps sgl_kernel==0.2.4
@@ -194,6 +207,15 @@ if [ -f "requirements.txt" ]; then
 else
     echo "⚠ requirements.txt not found, skipping VeRL installation"
 fi
+
+# Create symlink from shared code to local venv
+echo "Creating symlink from shared code to local venv..."
+cd /data/code/nla/verl
+if [ -L ".venv" ] || [ -d ".venv" ]; then
+    rm -rf .venv
+fi
+ln -s /workspace/venvs/nla/.venv .venv
+echo "✓ Symlink created: /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
 
 # 12) Login to HF and W&B if tokens are available
 if [ -n "$HF_TOKEN" ]; then
@@ -212,21 +234,22 @@ else
 fi
 
 # 13) Create helpful environment file
-cat > /workspace/kitf/.cluster_env << 'EOF'
+cat > /workspace/.cluster_env << 'EOF'
 # Hyperbolic Cluster Environment Variables
-# Source this file in your training scripts or shell: source /workspace/kitf/.cluster_env
+# Source this file in your training scripts or shell: source /workspace/.cluster_env
 
 # Storage paths
-export DATA_DIR=/data                          # Shared NFS storage for datasets and checkpoints
-export WORKSPACE_DIR=/workspace/kitf           # Local scratch for code and venvs
-export VERL_DIR=/workspace/kitf/nla/verl      # VeRL installation directory
+export DATA_DIR=/data                              # Shared NFS storage for datasets and checkpoints
+export CODE_DIR=/data/code/nla                     # Shared code repository
+export VERL_DIR=/data/code/nla/verl               # VeRL directory (shared code)
+export VENV_DIR=/workspace/venvs/nla/.venv        # Local venv (per-node compiled extensions)
 
-# Python environment
-export VENV_PATH=/workspace/kitf/nla/verl/.venv
+# Python environment (symlink in shared code points to local venv)
+export VENV_PATH=/data/code/nla/verl/.venv        # Use this - it's a symlink to local venv
 
 # Hugging Face
 export HF_HUB_ENABLE_HF_TRANSFER=1
-export HF_HOME=/workspace/.cache/huggingface   # Local cache on fast NVMe
+export HF_HOME=/workspace/.cache/huggingface       # Local cache on fast NVMe
 
 # Example usage in your training script:
 # DATA_PATH = os.environ.get('DATA_DIR', '/data')
@@ -234,7 +257,7 @@ export HF_HOME=/workspace/.cache/huggingface   # Local cache on fast NVMe
 # DATASET_PATH = f"{DATA_PATH}/datasets/my_dataset"
 EOF
 
-echo "✓ Created cluster environment file at /workspace/kitf/.cluster_env"
+echo "✓ Created cluster environment file at /workspace/.cluster_env"
 
 # 14) Node-specific setup
 if [ "$NODE_TYPE" == "head" ]; then
@@ -244,9 +267,10 @@ if [ "$NODE_TYPE" == "head" ]; then
     echo "=========================================="
     echo ""
     echo "STORAGE PATHS:"
-    echo "  • Shared data/checkpoints: /data"
-    echo "  • Local code/venvs:        /workspace/kitf"
-    echo "  • VeRL directory:          /workspace/kitf/nla/verl"
+    echo "  • Shared code:             /data/code/nla (all nodes see same code)"
+    echo "  • Shared data/checkpoints: /data/datasets, /data/checkpoints"
+    echo "  • Local venvs:             /workspace/venvs/nla/.venv (per-node)"
+    echo "  • Symlink:                 /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
     echo ""
     echo "NEXT STEPS:"
     echo "  1. Start Ray head:"
@@ -259,12 +283,12 @@ if [ "$NODE_TYPE" == "head" ]; then
     echo "     • Checkpoints:  /data/checkpoints/"
     echo ""
     echo "  4. Run training:"
-    echo "     cd /workspace/kitf/nla/verl"
-    echo "     source .venv/bin/activate"
+    echo "     cd /data/code/nla/verl"
+    echo "     source .venv/bin/activate    # follows symlink to local venv"
     echo "     python your_training_script.py"
     echo ""
     echo "TIP: Source cluster env for convenience:"
-    echo "     source /workspace/kitf/.cluster_env"
+    echo "     source /workspace/.cluster_env"
 else
     echo ""
     echo "=========================================="
@@ -272,9 +296,10 @@ else
     echo "=========================================="
     echo ""
     echo "STORAGE PATHS:"
-    echo "  • Shared data/checkpoints: /data"
-    echo "  • Local code/venvs:        /workspace/kitf"
-    echo "  • VeRL directory:          /workspace/kitf/nla/verl"
+    echo "  • Shared code:             /data/code/nla (all nodes see same code)"
+    echo "  • Shared data/checkpoints: /data/datasets, /data/checkpoints"
+    echo "  • Local venvs:             /workspace/venvs/nla/.venv (per-node)"
+    echo "  • Symlink:                 /data/code/nla/verl/.venv -> /workspace/venvs/nla/.venv"
     echo ""
     echo "NEXT STEPS:"
     echo "  1. Get Ray head address from head node"
@@ -283,7 +308,7 @@ else
     echo "     ray start --address=<head-ip>:6379"
     echo ""
     echo "TIP: Source cluster env for convenience:"
-    echo "     source /workspace/kitf/.cluster_env"
+    echo "     source /workspace/.cluster_env"
 fi
 
 echo ""
