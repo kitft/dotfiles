@@ -271,18 +271,18 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements
 
     # Run installation commands one by one in same zsh session
     /usr/bin/zsh <<'SCRIPT'
-        set -e
-        [ -f ~/.zshrc ] && source ~/.zshrc
-        export UV_CACHE_DIR=/scratch/.uv_cache
-        export PATH="$HOME/.local/bin:$PATH"
-        cd /scratch/venvs/nla
-        rm -rf .venv
-        uv venv --python=3.10.14
-        source .venv/bin/activate
-        cp /workspace/kitf/nla/verl/requirements.txt requirements.txt
-        uv pip sync requirements.txt
-        uv pip install flash-attn==2.8.2 --no-build-isolation
-        pip install --no-deps sgl_kernel==0.2.4
+set -e
+[ -f ~/.zshrc ] && source ~/.zshrc
+export UV_CACHE_DIR=/scratch/.uv_cache
+export PATH="$HOME/.local/bin:$PATH"
+cd /scratch/venvs/nla
+rm -rf .venv
+uv venv --python=3.10.14
+source .venv/bin/activate
+cp /workspace/kitf/nla/verl/requirements.txt requirements.txt
+uv pip sync requirements.txt
+uv pip install flash-attn==2.8.2 --no-build-isolation
+pip install --no-deps sgl_kernel==0.2.4
 SCRIPT
     echo "✓ VeRL environment installed"
 
