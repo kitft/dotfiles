@@ -273,7 +273,10 @@ if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements
     cd /scratch/venvs/nla
     rm -rf .venv
     uv venv --python=3.10.14
-    source .venv/bin/activate
+
+    # Explicitly set PATH to use venv first
+    export PATH="/scratch/venvs/nla/.venv/bin:$PATH"
+    export VIRTUAL_ENV="/scratch/venvs/nla/.venv"
 
     # Install dependencies from shared code location
     cd /workspace/kitf/nla/verl
