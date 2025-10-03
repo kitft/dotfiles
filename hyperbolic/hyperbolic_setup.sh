@@ -260,22 +260,22 @@ fi
 echo "Creating Python virtual environment on local scratch..."
 mkdir -p /scratch/venvs/nla
 cd /scratch/venvs/nla
-rm -rf .venv
-python3.10 -m venv .venv
-source .venv/bin/activate
 
 # Configure UV to use local cache
 export UV_CACHE_DIR=/scratch/.uv_cache
 mkdir -p $UV_CACHE_DIR
 
-pip install --upgrade pip
-
 # Install from shared code location (if available)
 if [ "$SKIP_CODE_SETUP" = false ] && [ -f "/workspace/kitf/nla/verl/requirements.txt" ]; then
     echo "Installing VeRL dependencies (this may take 10-15 minutes)..."
     cd /workspace/kitf/nla/verl
-    pip install -r requirements.txt
-    pip install flash-attn==2.8.2 --no-build-isolation
+
+    # Use uv for venv creation and dependency installation
+    rm -rf .venv
+    uv venv --python=3.10.14
+    source .venv/bin/activate
+    uv pip sync requirements.txt
+    uv pip install flash-attn==2.8.2 --no-build-isolation
     pip install --no-deps sgl_kernel==0.2.4
     echo "✓ VeRL environment installed"
 
