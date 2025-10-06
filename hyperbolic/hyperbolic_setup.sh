@@ -89,36 +89,38 @@ fi
 # 3) Setup local scratch volume (LVM-backed NVMe) - mount to /scratch
 echo "Setting up local scratch volume..."
 if ! mountpoint -q /scratch; then
-    # Detect NVMe devices (skip nvme0n1 and nvme1n1, use nvme2n1+)
-    NVME_DEVICES=$(lsblk -d -o name,type | grep nvme | awk '{print "/dev/"$1}' | grep -E 'nvme[2-9]n1')
-
-    if [ -n "$NVME_DEVICES" ]; then
-        echo "Found NVMe devices: $NVME_DEVICES"
-
-        # Create volume group if it doesn't exist
-        if ! sudo vgs vg0 &>/dev/null; then
-            sudo vgcreate vg0 $NVME_DEVICES
-        fi
-
-        # Create logical volume if it doesn't exist
-        if ! sudo lvs vg0/lv_scratch &>/dev/null; then
-            sudo lvcreate -n lv_scratch -l 100%FREE vg0
-            sudo mkfs.ext4 /dev/mapper/vg0-lv_scratch
-        fi
-
-        # Mount the volume
-        sudo mkdir -p /scratch
-        if ! grep -q "/dev/mapper/vg0-lv_scratch" /etc/fstab; then
-            echo '/dev/mapper/vg0-lv_scratch /scratch ext4 defaults 0 0' | sudo tee -a /etc/fstab
-        fi
-        sudo mount -a
-        echo "✓ Local scratch volume mounted at /scratch"
+    # Create volume group if it doesn't exist
+    if ! sudo vgs vg0 &>/dev/null; then
+        echo "Creating LVM volume group from NVMe devices..."
+        sudo vgcreate vg0 /dev/nvme2n1 /dev/nvme3n1 /dev/nvme4n1 /dev/nvme5n1 /dev/nvme6n1
     else
-        echo "⚠ No additional NVMe devices found, creating /scratch without LVM"
-        sudo mkdir -p /scratch
+        echo "✓ Volume group vg0 already exists"
     fi
+
+    # Create logical volume if it doesn't exist
+    if ! sudo lvs vg0/lv_scratch &>/dev/null; then
+        echo "Creating logical volume..."
+        sudo lvcreate -n lv_scratch -l 100%FREE vg0
+        sudo mkfs.ext4 /dev/mapper/vg0-lv_scratch
+    else
+        echo "✓ Logical volume lv_scratch already exists"
+    fi
+
+    # Add to fstab if not already there
+    sudo mkdir -p /scratch
+    if ! grep -q "/dev/mapper/vg0-lv_scratch" /etc/fstab; then
+        echo "Adding /scratch to /etc/fstab..."
+        echo '/dev/mapper/vg0-lv_scratch /scratch ext4 defaults 0 0' | sudo tee -a /etc/fstab
+    fi
+
+    # Mount the volume
+    echo "Mounting /scratch..."
+    sudo mount -v /scratch
+    sudo df -hPT /scratch
+    echo "✓ Local scratch volume mounted at /scratch"
 else
     echo "✓ /scratch already mounted"
+    sudo df -hPT /scratch
 fi
 
 # Always ensure current user has write permissions to /scratch
