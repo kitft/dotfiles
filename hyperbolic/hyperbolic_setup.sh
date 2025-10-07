@@ -8,6 +8,9 @@ set -e
 NODE_TYPE="${1:-worker}"  # Default to worker if not specified
 STORAGE_VIP="${2:-}"      # Network volume VIP (optional)
 
+# Track skipped steps for final summary
+SKIP_WARNINGS=()
+
 echo "=========================================="
 echo "Hyperbolic Node Setup - ${NODE_TYPE} node"
 echo "=========================================="
@@ -54,6 +57,7 @@ if [ -n "$STORAGE_VIP" ]; then
             echo "    sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 $STORAGE_VIP:/data /workspace"
             echo ""
             echo "  Continuing with rest of setup..."
+            SKIP_WARNINGS+=("/workspace mount failed - NFS server $STORAGE_VIP unreachable. Create/attach network volume in Hyperbolic UI first.")
         else
             # Add to fstab if not already there
             if ! grep -q "$STORAGE_VIP" /etc/fstab; then
@@ -70,6 +74,7 @@ if [ -n "$STORAGE_VIP" ]; then
                 echo "⚠ Failed to mount network volume"
                 echo "  Debug: Check dmesg or /var/log/syslog for errors"
                 echo "  Try manually: sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 $STORAGE_VIP:/data /workspace"
+                SKIP_WARNINGS+=("/workspace mount failed - try manually: sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 $STORAGE_VIP:/data /workspace")
             fi
         fi
     else
@@ -84,6 +89,7 @@ if [ -n "$STORAGE_VIP" ]; then
 else
     echo "⚠ No storage VIP provided, skipping network volume setup"
     echo "  Note: You'll need to mount /workspace manually for shared storage features"
+    SKIP_WARNINGS+=("/workspace not mounted - no storage VIP provided. Mount manually: sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 <VIP>:/data /workspace")
 fi
 
 # 3) Setup local scratch volume (LVM-backed NVMe) - mount to /scratch
@@ -128,6 +134,19 @@ if [ ! -w /scratch ]; then
     echo "Fixing /scratch permissions..."
     sudo chown -R $USER:$USER /scratch
 fi
+
+# Setup cache directories on /scratch
+echo "Configuring cache directories on /scratch..."
+export UV_CACHE_DIR=/scratch/.uv_cache
+export HF_HOME=/scratch/.cache/huggingface
+mkdir -p $UV_CACHE_DIR $HF_HOME
+
+# Add to shell rc files for persistence
+echo 'export UV_CACHE_DIR=/scratch/.uv_cache' >> ~/.bashrc
+echo 'export HF_HOME=/scratch/.cache/huggingface' >> ~/.bashrc
+echo 'export UV_CACHE_DIR=/scratch/.uv_cache' >> ~/.zshrc
+echo 'export HF_HOME=/scratch/.cache/huggingface' >> ~/.zshrc
+echo "✓ Cache directories configured: UV_CACHE_DIR=$UV_CACHE_DIR, HF_HOME=$HF_HOME"
 
 # 4) Setup Python tools
 echo "Setting up Python tools..."
@@ -199,10 +218,10 @@ npm install -g @anthropic-ai/claude-code
 
 # 9) Block Ray ports for security
 echo "Blocking Ray ports..."
-if [ -f "./hyperbolic_block.sh" ]; then
-    sudo ./hyperbolic_block.sh
+if [ -f "./hyperbolic/hyperbolic_block.sh" ]; then
+    sudo ./hyperbolic/hyperbolic_block.sh
 else
-    echo "Warning: hyperbolic_block.sh not found"
+    echo "Warning: hyperbolic/hyperbolic_block.sh not found"
 fi
 
 # 10) Setup secrets and environment variables
@@ -225,6 +244,7 @@ if [ -f "./setup_env.sh" ]; then
     fi
 else
     echo "⚠ setup_env.sh not found, you'll need to set HF_TOKEN and WANDB_API_KEY manually"
+    SKIP_WARNINGS+=("setup_env.sh not found - set HF_TOKEN and WANDB_API_KEY manually")
 fi
 
 # 11) Setup VeRL environment
@@ -239,9 +259,10 @@ if ! mountpoint -q /workspace; then
     echo "    git clone --recurse-submodules git@github.com:kitft/nla.git"
     echo ""
     echo "  Then create the symlink:"
-    echo "    cd /workspace/kitf/nla/verl && ln -s /scratch/venvs/nla/.venv .venv"
+    echo "    cd /workspace/kitf/nla && ln -s /scratch/venvs/nla/.venv .venv"
     echo ""
     SKIP_CODE_SETUP=true
+    SKIP_WARNINGS+=("Code cloning skipped - /workspace not mounted. Clone manually after mounting /workspace.")
 else
     # Clone code to shared storage (if on head node or if doesn't exist)
     if [ ! -d "/workspace/kitf/nla" ]; then
@@ -263,10 +284,6 @@ echo "Creating Python virtual environment on local scratch..."
 mkdir -p /scratch/venvs/nla
 cd /scratch/venvs/nla
 
-# Configure UV to use local cache
-export UV_CACHE_DIR=/scratch/.uv_cache
-mkdir -p $UV_CACHE_DIR
-
 # Note: VeRL environment installation must be done manually
 echo ""
 echo "=========================================="
@@ -274,7 +291,7 @@ echo "⚠️  MANUAL STEP REQUIRED"
 echo "=========================================="
 echo ""
 echo "To complete VeRL installation, run:"
-echo "  cd /workspace/kitf/nla/verl"
+echo "  cd /workspace/kitf/nla"
 echo "  /workspace/kitf/dotfiles/hyperbolic/install_env.sh"
 echo ""
 echo "This will:"
@@ -290,6 +307,7 @@ if [ -n "$HF_TOKEN" ]; then
     echo "✓ Logged into Hugging Face"
 else
     echo "⚠ HF_TOKEN not set, skipping Hugging Face login"
+    SKIP_WARNINGS+=("Hugging Face login skipped - HF_TOKEN not set. Login manually: huggingface-cli login")
 fi
 
 # 13) Create helpful environment file
@@ -305,11 +323,12 @@ export SCRATCH_DIR=/scratch                           # Local scratch (venvs, ca
 export VENV_DIR=/scratch/venvs/nla/.venv             # Local venv (per-node compiled extensions)
 
 # Python environment (symlink in shared code points to local venv)
-export VENV_PATH=/workspace/kitf/nla/verl/.venv      # Use this - it's a symlink to local venv
+export VENV_PATH=/workspace/kitf/nla/.venv           # Use this - it's a symlink to local venv
 
-# Hugging Face
-export HF_HUB_ENABLE_HF_TRANSFER=1
-export HF_HOME=/scratch/.cache/huggingface           # Local cache on fast NVMe
+# Cache directories (use fast local NVMe for caching)
+export UV_CACHE_DIR=/scratch/.uv_cache               # UV/pip cache
+export HF_HOME=/scratch/.cache/huggingface           # Hugging Face cache
+export HF_HUB_ENABLE_HF_TRANSFER=1                   # Fast HF downloads
 
 # Example usage in your training script:
 # CHECKPOINT_PATH = "/workspace/checkpoints/my_model"
@@ -325,12 +344,25 @@ if [ "$NODE_TYPE" == "head" ]; then
     echo "HEAD NODE SETUP COMPLETE"
     echo "=========================================="
     echo ""
+
+    # Print any warnings/skipped steps
+    if [ ${#SKIP_WARNINGS[@]} -gt 0 ]; then
+        echo "⚠️  WARNINGS - STEPS THAT WERE SKIPPED:"
+        echo ""
+        for warning in "${SKIP_WARNINGS[@]}"; do
+            echo "  • $warning"
+        done
+        echo ""
+        echo "=========================================="
+        echo ""
+    fi
+
     echo "STORAGE PATHS:"
     echo "  • Shared workspace:        /workspace (NFS - code, datasets, checkpoints)"
     echo "  • Shared code:             /workspace/kitf/nla (all nodes see same code)"
     echo "  • Local scratch:           /scratch (NVMe - venvs, caches)"
     echo "  • Local venvs:             /scratch/venvs/nla/.venv (per-node)"
-    echo "  • Symlink:                 /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
+    echo "  • Symlink:                 /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
     echo ""
     echo "NEXT STEPS:"
     echo "  1. Start Ray head:"
@@ -343,7 +375,7 @@ if [ "$NODE_TYPE" == "head" ]; then
     echo "     • Checkpoints:  /workspace/checkpoints/"
     echo ""
     echo "  4. Run training:"
-    echo "     cd /workspace/kitf/nla/verl"
+    echo "     cd /workspace/kitf/nla"
     echo "     source .venv/bin/activate    # follows symlink to local venv"
     echo "     python your_training_script.py"
     echo ""
@@ -355,12 +387,25 @@ else
     echo "WORKER NODE SETUP COMPLETE"
     echo "=========================================="
     echo ""
+
+    # Print any warnings/skipped steps
+    if [ ${#SKIP_WARNINGS[@]} -gt 0 ]; then
+        echo "⚠️  WARNINGS - STEPS THAT WERE SKIPPED:"
+        echo ""
+        for warning in "${SKIP_WARNINGS[@]}"; do
+            echo "  • $warning"
+        done
+        echo ""
+        echo "=========================================="
+        echo ""
+    fi
+
     echo "STORAGE PATHS:"
     echo "  • Shared workspace:        /workspace (NFS - code, datasets, checkpoints)"
     echo "  • Shared code:             /workspace/kitf/nla (all nodes see same code)"
     echo "  • Local scratch:           /scratch (NVMe - venvs, caches)"
     echo "  • Local venvs:             /scratch/venvs/nla/.venv (per-node)"
-    echo "  • Symlink:                 /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
+    echo "  • Symlink:                 /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
     echo ""
     echo "NEXT STEPS:"
     echo "  1. Get Ray head address from head node"

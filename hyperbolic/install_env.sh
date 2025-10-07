@@ -35,4 +35,4 @@ if [ -L ".venv" ] || [ -d ".venv" ]; then
     rm -rf .venv
 fi
 ln -s /scratch/venvs/nla/.venv .venv
-echo "✓ Symlink created: /workspace/kitf/nla/verl/.venv -> /scratch/venvs/nla/.venv"
+echo "✓ Symlink created: /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"

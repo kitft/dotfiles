@@ -66,7 +66,7 @@ After setup completes:
 
 2. **Run training**:
    ```bash
-   cd /workspace/kitf/nla/verl
+   cd /workspace/kitf/nla
    source .venv/bin/activate
    python your_training_script.py
    ```
@@ -78,7 +78,7 @@ After setup completes:
 - **Datasets** (`/workspace/datasets/`) - Training data accessible to all nodes
 - **Model checkpoints** (`/workspace/checkpoints/`) - Saved/loaded by all nodes
 - **Dotfiles** (`/workspace/kitf/dotfiles`)
-- **Symlink** (`/workspace/kitf/nla/verl/.venv` → `/scratch/venvs/nla/.venv`) - Points to local venv
+- **Symlink** (`/workspace/kitf/nla/.venv` → `/scratch/venvs/nla/.venv`) - Points to local venv
 
 ### Local Scratch (`/scratch`) - Node-Specific
 - **Python venvs** (`/scratch/venvs/nla/.venv`) - Compiled CUDA kernels per node
@@ -91,14 +91,14 @@ After setup completes:
 The clever part: code lives on shared storage, but each node has its own venv with compiled extensions on local scratch. A symlink in the shared code directory points to each node's local venv:
 
 ```
-/workspace/kitf/nla/verl/.venv  →  /scratch/venvs/nla/.venv
+/workspace/kitf/nla/.venv  →  /scratch/venvs/nla/.venv
 ```
 
 Since the symlink path is identical on all nodes, each node follows it to its own local venv. This means:
 - ✓ Clone code once, use everywhere
 - ✓ Edit code once, all nodes see changes instantly
 - ✓ Each node has its own compiled extensions (no conflicts)
-- ✓ Standard workflow: `cd /workspace/kitf/nla/verl && source .venv/bin/activate`
+- ✓ Standard workflow: `cd /workspace/kitf/nla && source .venv/bin/activate`
 
 ## Architecture
 
