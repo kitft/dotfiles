@@ -78,10 +78,10 @@ alias workspace="cd /workspace/kitf"
 # Block Ray ports if on Hyperbolic node
 if [ -n "$HYPERBOLIC_NODE" ] || [ -n "$HYPERBOLIC" ] || hostname | grep -iq "hyperbolic"; then
     echo "Detected Hyperbolic node - blocking Ray ports..."
-    if [ -f "./hyperbolic_block.sh" ]; then
-        sudo ./hyperbolic_block.sh
+    if [ -f "./hyperbolic/hyperbolic_block.sh" ]; then
+        sudo ./hyperbolic/hyperbolic_block.sh
     else
-        echo "Warning: hyperbolic_block.sh not found"
+        echo "Warning: hyperbolic/hyperbolic_block.sh not found"
     fi
 fi
 
