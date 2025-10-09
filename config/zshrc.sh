@@ -20,8 +20,8 @@ source $CONFIG_DIR/extras.sh
 source $CONFIG_DIR/key_bindings.sh
 add_to_path "${DOT_DIR}/custom_bins"
 
-# for uv
-if [ -d "$HOME/.local/bin" ]; then
+# for uv (Linux only)
+if [[ "$(uname)" == "Linux" ]] && [ -d "$HOME/.local/bin" ]; then
 	source $HOME/.local/bin/env
 fi	
 
@@ -208,7 +208,10 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   fi
 fi
 
-export PATH=/workspace/kitf/.npm-global/bin:$PATH
+# Hyperbolic cluster-specific PATH (Linux only)
+if [[ "$(uname)" == "Linux" ]]; then
+  export PATH=/workspace/kitf/.npm-global/bin:$PATH
+fi
 
+# Fast HF downloads (all platforms)
 export HF_HUB_ENABLE_HF_TRANSFER=1
-source ~/.local/bin
