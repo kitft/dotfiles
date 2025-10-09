@@ -4,7 +4,7 @@
 temp_dir=$(mktemp -d)
 
 echo "Cloning kitft/secrets repository..."
-# Use HTTPS clone (works with gh CLI auth, no SSH keys needed)
+# Use HTTPS clone (git should be configured to use gh CLI credentials)
 git clone https://github.com/kitft/secrets.git "$temp_dir" || {
     echo "Failed to clone repository. Please check if it exists and you have access."
     rm -rf "$temp_dir"
