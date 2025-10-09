@@ -103,8 +103,8 @@ if command -v gh &> /dev/null; then
         fi
     fi
 
-    # Configure GitHub CLI to use SSH
-    gh config set git_protocol ssh 2>/dev/null || true
+    # Configure GitHub CLI to use HTTPS (works without SSH keys)
+    gh config set git_protocol https 2>/dev/null || true
 else
     echo "❌ GitHub CLI not found. Please install it first."
 fi
@@ -236,8 +236,9 @@ if [ -n "$github_url" ]; then
 fi
 
 
-echo "setting credential store"
-git config --global credential.helper store
+echo "Configuring git to use gh CLI for credentials"
+git config --global credential.helper ""
+git config --global credential.https://github.com.helper "!gh auth git-credential"
 
 echo "GitHub setup complete!"
 if [ -d "/workspace/kitf" ]; then
