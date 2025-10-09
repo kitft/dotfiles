@@ -270,7 +270,7 @@ if ! mountpoint -q /workspace; then
     echo "  Skipping code cloning to shared storage."
     echo "  After mounting /workspace, run:"
     echo "    mkdir -p /workspace/kitf && cd /workspace/kitf"
-    echo "    git clone --recurse-submodules git@github.com:kitft/nla.git"
+    echo "    git clone --recurse-submodules https://github.com/kitft/nla.git"
     echo ""
     echo "  Then create the symlink:"
     echo "    cd /workspace/kitf/nla && ln -s /scratch/venvs/nla/.venv .venv"
@@ -279,14 +279,18 @@ if ! mountpoint -q /workspace; then
     SKIP_WARNINGS+=("Code cloning skipped - /workspace not mounted. Clone manually after mounting /workspace.")
 else
     # Clone code to shared storage (if on head node or if doesn't exist)
-    if [ ! -d "/workspace/kitf/nla" ]; then
+    # Check if it's a valid git repo (not just an empty directory)
+    if [ ! -d "/workspace/kitf/nla/.git" ]; then
         echo "Cloning nla repository to shared storage..."
         mkdir -p /workspace/kitf
         cd /workspace/kitf
-        git clone --recurse-submodules git@github.com:kitft/nla.git
+        # Use HTTPS clone (works with gh CLI auth, no SSH keys needed)
+        git clone --recurse-submodules https://github.com/kitft/nla.git
     else
         echo "✓ Code already exists on shared storage"
         cd /workspace/kitf/nla
+        # Ensure remote uses HTTPS (in case it was cloned with SSH before)
+        git remote set-url origin https://github.com/kitft/nla.git
         git checkout main
         git pull
     fi
