@@ -68,10 +68,9 @@ if [ -n "$STORAGE_VIP" ]; then
             echo "Mounting shared network volume to /workspace..."
             if sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 "$STORAGE_VIP:/data" /workspace; then
                 echo "✓ Shared network volume mounted at /workspace"
-                # Fix ownership of shared workspace
-                # Skip .venv directories since they're symlinks to local /scratch storage
-                # and trying to chown through symlinks causes "Operation not permitted" errors on NFS
-                sudo find /workspace -path '*/.venv' -prune -o -exec chown $USER:$USER {} +
+                # Ensure user directory exists and is owned by current user (not recursive)
+                sudo mkdir -p /workspace/kitf
+                sudo chown $USER:$USER /workspace/kitf
             else
                 echo "⚠ Failed to mount network volume"
                 echo "  Debug: Check dmesg or /var/log/syslog for errors"
@@ -83,11 +82,11 @@ if [ -n "$STORAGE_VIP" ]; then
         echo "✓ /workspace already mounted"
     fi
 
-    # Always ensure current user has write permissions to /workspace
-    if [ ! -w /workspace ]; then
-        echo "Fixing /workspace permissions..."
-        # Skip .venv directories (symlinks to local /scratch) to avoid NFS permission errors
-        sudo find /workspace -path '*/.venv' -prune -o -exec chown $USER:$USER {} +
+    # Always ensure user directory exists and is writable
+    sudo mkdir -p /workspace/kitf
+    if [ ! -w /workspace/kitf ]; then
+        echo "Fixing /workspace/kitf permissions..."
+        sudo chown $USER:$USER /workspace/kitf
     fi
 else
     echo "⚠ No storage VIP provided, skipping network volume setup"
@@ -135,8 +134,7 @@ fi
 # Always ensure current user has write permissions to /scratch
 if [ ! -w /scratch ]; then
     echo "Fixing /scratch permissions..."
-    # Skip .venv directories to avoid chown errors on Python packages owned by root
-    sudo find /scratch -path '*/.venv' -prune -o -exec chown $USER:$USER {} +
+    sudo chown $USER:$USER /scratch
 fi
 
 # Setup cache directories on /scratch
