@@ -29,10 +29,28 @@ fi
 echo "✓ VeRL environment installed"
 
 # Create symlink from shared code to local venv
-echo "Creating symlink from shared code to local venv..."
+echo "Setting up symlink from shared code to local venv..."
 cd /workspace/kitf/nla
-if [ -L ".venv" ] || [ -d ".venv" ]; then
+
+# Check if symlink already exists and points to the correct location
+if [ -L ".venv" ]; then
+    current_target=$(readlink .venv)
+    if [ "$current_target" = "/scratch/venvs/nla/.venv" ]; then
+        echo "✓ Symlink already correctly configured: /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
+    else
+        echo "Symlink exists but points to wrong location ($current_target), recreating..."
+        rm .venv
+        ln -s /scratch/venvs/nla/.venv .venv
+        echo "✓ Symlink updated: /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
+    fi
+elif [ -e ".venv" ]; then
+    # It's a regular file or directory, not a symlink
+    echo "⚠ .venv exists but is not a symlink, removing and recreating..."
     rm -rf .venv
+    ln -s /scratch/venvs/nla/.venv .venv
+    echo "✓ Symlink created: /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
+else
+    # Doesn't exist, create it
+    ln -s /scratch/venvs/nla/.venv .venv
+    echo "✓ Symlink created: /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
 fi
-ln -s /scratch/venvs/nla/.venv .venv
-echo "✓ Symlink created: /workspace/kitf/nla/.venv -> /scratch/venvs/nla/.venv"
