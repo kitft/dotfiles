@@ -20,9 +20,10 @@ source $CONFIG_DIR/extras.sh
 source $CONFIG_DIR/key_bindings.sh
 add_to_path "${DOT_DIR}/custom_bins"
 
-# for uv
-#if [ -d "$HOME/.local/bin" ]; then
-#  source $HOME/.local/bin/env
+for uv
+if [ -d "$HOME/.local/bin" ]; then
+	source $HOME/.local/bin/env
+fi	
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 if [ -d "$HOME/.cargo" ]; then
