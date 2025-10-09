@@ -1,20 +1,40 @@
 setup_tmux() {
   echo "Setting up tmux configuration..."
 
-  # Determine config source - try multiple locations relative to script execution dir
-  if [ -f "./tmux.conf" ]; then
-    CONFIG_SOURCE="./tmux.conf"
-  elif [ -f "./config/tmux.conf" ]; then
-    # Use the relative path that was successfully checked
+  # Save current directory to return later
+  local original_dir=$(pwd)
+
+  # Try to find the dotfiles directory and cd into it
+  local dotfiles_dir=""
+  if [ -d "/workspace/kitf/dotfiles" ]; then
+    dotfiles_dir="/workspace/kitf/dotfiles"
+  elif [ -d "$HOME/dotfiles" ]; then
+    dotfiles_dir="$HOME/dotfiles"
+  elif [ -d "$(dirname $(realpath ${BASH_SOURCE[0]:-$0}))" ]; then
+    dotfiles_dir="$(dirname $(realpath ${BASH_SOURCE[0]:-$0}))"
+  fi
+
+  # If we found dotfiles dir, cd into it
+  if [ -n "$dotfiles_dir" ]; then
+    cd "$dotfiles_dir"
+  fi
+
+  # Determine config source - try multiple locations
+  if [ -f "./config/tmux.conf" ]; then
     CONFIG_SOURCE="./config/tmux.conf"
-  elif [ -f "$HOME/dotfiles/tmux.conf" ]; then
-    # This assumes dotfiles are cloned directly into $HOME
-    CONFIG_SOURCE="$HOME/dotfiles/tmux.conf"
+  elif [ -f "./tmux.conf" ]; then
+    CONFIG_SOURCE="./tmux.conf"
+  elif [ -f "/workspace/kitf/dotfiles/config/tmux.conf" ]; then
+    CONFIG_SOURCE="/workspace/kitf/dotfiles/config/tmux.conf"
+  elif [ -f "/workspace/kitf/dotfiles/tmux.conf" ]; then
+    CONFIG_SOURCE="/workspace/kitf/dotfiles/tmux.conf"
   elif [ -f "$HOME/dotfiles/config/tmux.conf" ]; then
-     # Add check for config subdir under $HOME/dotfiles
-     CONFIG_SOURCE="$HOME/dotfiles/config/tmux.conf"
+    CONFIG_SOURCE="$HOME/dotfiles/config/tmux.conf"
+  elif [ -f "$HOME/dotfiles/tmux.conf" ]; then
+    CONFIG_SOURCE="$HOME/dotfiles/tmux.conf"
   else
-    echo "Warning: tmux config file not found in expected locations (./tmux.conf, ./config/tmux.conf, $HOME/dotfiles/tmux.conf, $HOME/dotfiles/config/tmux.conf)"
+    echo "Warning: tmux config file not found in expected locations"
+    cd "$original_dir"
     return 1
   fi
 
@@ -49,6 +69,9 @@ setup_tmux() {
   if [ -n "$TMUX" ]; then
     tmux source-file ~/.tmux.conf
   fi
+
+  # Return to original directory
+  cd "$original_dir"
 
   echo "tmux configuration complete!"
 }
