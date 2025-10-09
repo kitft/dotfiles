@@ -68,9 +68,16 @@ if [ -n "$STORAGE_VIP" ]; then
             echo "Mounting shared network volume to /workspace..."
             if sudo mount -t nfs -o rw,nconnect=16,nfsvers=3 "$STORAGE_VIP:/data" /workspace; then
                 echo "✓ Shared network volume mounted at /workspace"
-                # Ensure user directory exists and is owned by current user (not recursive)
-                sudo mkdir -p /workspace/kitf
-                sudo chown $USER:$USER /workspace/kitf
+                # Ensure user directory exists
+                mkdir -p /workspace/kitf
+                # Verify we can write to it
+                if ! touch /workspace/kitf/.write_test 2>/dev/null; then
+                    echo "⚠ WARNING: Cannot write to /workspace/kitf - check NFS export permissions"
+                    SKIP_WARNINGS+=("/workspace/kitf not writable - check NFS export settings")
+                else
+                    rm /workspace/kitf/.write_test
+                    echo "✓ /workspace/kitf is writable"
+                fi
             else
                 echo "⚠ Failed to mount network volume"
                 echo "  Debug: Check dmesg or /var/log/syslog for errors"
@@ -82,11 +89,13 @@ if [ -n "$STORAGE_VIP" ]; then
         echo "✓ /workspace already mounted"
     fi
 
-    # Always ensure user directory exists and is writable
-    sudo mkdir -p /workspace/kitf
-    if [ ! -w /workspace/kitf ]; then
-        echo "Fixing /workspace/kitf permissions..."
-        sudo chown $USER:$USER /workspace/kitf
+    # Always verify user directory is writable
+    mkdir -p /workspace/kitf
+    if ! touch /workspace/kitf/.write_test 2>/dev/null; then
+        echo "⚠ WARNING: Cannot write to /workspace/kitf"
+        SKIP_WARNINGS+=("/workspace/kitf not writable - check permissions")
+    else
+        rm /workspace/kitf/.write_test
     fi
 else
     echo "⚠ No storage VIP provided, skipping network volume setup"
@@ -131,10 +140,13 @@ else
     sudo df -hPT /scratch
 fi
 
-# Always ensure current user has write permissions to /scratch
-if [ ! -w /scratch ]; then
-    echo "Fixing /scratch permissions..."
+# Verify /scratch is writable
+if ! touch /scratch/.write_test 2>/dev/null; then
+    echo "⚠ WARNING: Cannot write to /scratch"
+    echo "Attempting to fix permissions..."
     sudo chown $USER:$USER /scratch
+else
+    rm /scratch/.write_test
 fi
 
 # Setup cache directories on /scratch
