@@ -1,5 +1,6 @@
 
 export PATH="$HOME/.local/bin:$PATH"
+mkdir -p /scratch/venvs/nla
 cd /scratch/venvs/nla
 rm -rf .venv
 uv venv --python=3.10.14
