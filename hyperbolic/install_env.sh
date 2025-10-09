@@ -3,7 +3,7 @@ export PATH="$HOME/.local/bin:$PATH"
 cd /scratch/venvs/nla
 rm -rf .venv
 uv venv --python=3.10.14
-source .venv/bin/activate
+. .venv/bin/activate
 
 # Install dependencies from shared code location
 cp /workspace/kitf/nla/requirements.txt requirements.txt
