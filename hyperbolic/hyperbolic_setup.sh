@@ -232,10 +232,17 @@ npm install -g @anthropic-ai/claude-code
 
 # 9) Block Ray ports for security
 echo "Blocking Ray ports..."
-if [ -f "./hyperbolic/hyperbolic_block.sh" ]; then
-    sudo ./hyperbolic/hyperbolic_block.sh
+if [ -f "./hyperbolic/hyperbolic_block_localhost_only.sh" ]; then
+    sudo ./hyperbolic/hyperbolic_block_localhost_only.sh
 else
-    echo "Warning: hyperbolic/hyperbolic_block.sh not found"
+    echo "Warning: hyperbolic/hyperbolic_block_localhost_only.sh not found"
+    echo "  Falling back to basic block script..."
+    if [ -f "./hyperbolic/hyperbolic_block.sh" ]; then
+        sudo ./hyperbolic/hyperbolic_block.sh
+    else
+        echo "  ERROR: No firewall script found!"
+        SKIP_WARNINGS+=("Ray port firewall not configured - run hyperbolic_block_localhost_only.sh manually")
+    fi
 fi
 
 # 10) Setup secrets and environment variables
